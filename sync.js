@@ -161,36 +161,47 @@ async function updatePage(pageId, issue) {
 
 // -------------------- Runner --------------------
 async function syncOnce() {
+  const pLimit = (await import("p-limit")).default;
+  const limit = pLimit(5); // 동시에 5개만 처리
+  const start = Date.now();
   const issues = await fetchIssues();
   console.log(`Fetched ${issues.length} issues`);
+
+  const worklogPromises = issues.map((issue) =>
+    limit(async () => {
+      const worklogs = await fetchAllWorklogs(issue.key);
+      issue.__worklogSeconds = sumWorklogSeconds(worklogs);
+      return issue;
+    }),
+  );
+  const issuesWithWorklog = await Promise.all(worklogPromises);
 
   let created = 0;
   let updated = 0;
 
-  for (const issue of issues) {
+  // Notion 처리도 병렬화 가능 (rate limit 주의)
+  for (const issue of issuesWithWorklog) {
     const key = issue.key;
-
-    // ✅ Worklog 합산
-    const worklogs = await fetchAllWorklogs(key);
-    const totalSeconds = sumWorklogSeconds(worklogs);
-    issue.__worklogSeconds = totalSeconds;
     const page = await findPageByKey(key);
 
     if (!page) {
       await createPage(issue);
       created++;
       console.log(
-        `+ created ${key} (worklog: ${Math.round((totalSeconds / 3600) * 100) / 100}h)`,
+        `+ created ${key} (worklog: ${Math.round((issue.__worklogSeconds / 3600) * 100) / 100}h)`,
       );
     } else {
       await updatePage(page.id, issue);
       updated++;
       console.log(
-        `~ updated ${key} (worklog: ${Math.round((totalSeconds / 3600) * 100) / 100}h)`,
+        `~ updated ${key} (worklog: ${Math.round((issue.__worklogSeconds / 3600) * 100) / 100}h)`,
       );
     }
   }
+  const end = Date.now();
+  const elapsed = ((end - start) / 1000).toFixed(2);
   console.log(`Done. created=${created}, updated=${updated}`);
+  console.log(`Elapsed time: ${elapsed}s`);
 }
 
 async function main() {
