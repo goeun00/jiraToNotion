@@ -80,6 +80,25 @@ function sumWorklogSeconds(worklogs) {
   return worklogs.reduce((sum, w) => sum + (w.timeSpentSeconds || 0), 0);
 }
 
+function getLastWorklogDateISO(worklogs) {
+  if (!worklogs || worklogs.length === 0) return null;
+
+  // started(작업한 날짜) 우선, 없으면 updated/created로 fallback
+  let latest = null;
+
+  for (const w of worklogs) {
+    const raw = w.started || w.updated || w.created;
+    if (!raw) continue;
+
+    const t = Date.parse(raw);
+    if (Number.isNaN(t)) continue;
+
+    if (!latest || t > latest) latest = t;
+  }
+
+  return latest ? new Date(latest).toISOString() : null;
+}
+
 // -------------------- Notion --------------------
 async function notionFetch(path, options = {}) {
   const res = await fetch(`https://api.notion.com/v1${path}`, {
@@ -108,19 +127,16 @@ async function findPageByKey(issueKey) {
       },
     },
   };
-
   const data = await notionFetch(`/databases/${NOTION_DATABASE_ID}/query`, {
     method: "POST",
     body: JSON.stringify(body),
   });
-
   return data.results?.[0] || null;
 }
 
 function issueToProps(issue) {
   const key = issue.key;
   const fields = issue.fields || {};
-
   const summary = fields.summary || "";
   const status = fields.status?.name || "";
   const updated = fields.updated || "";
@@ -128,7 +144,7 @@ function issueToProps(issue) {
   const reporter = fields.reporter?.displayName || fields.reporter?.name || "";
   const worklogSeconds = Number(issue.__worklogSeconds || 0);
   const Logged = Math.round((worklogSeconds / 28800) * 100) / 100;
-
+  const lastLoggedAt = issue.__lastLoggedAt || null;
   return {
     Title: { title: [{ text: { content: summary } }] },
     Key: { rich_text: [{ text: { content: key } }] },
@@ -137,6 +153,9 @@ function issueToProps(issue) {
     URL: { url },
     Logged: { number: Logged },
     Reporter: { rich_text: [{ text: { content: reporter } }] },
+    LastLogDate: lastLoggedAt
+      ? { date: { start: lastLoggedAt } }
+      : { date: null },
   };
 }
 
@@ -171,6 +190,7 @@ async function syncOnce() {
     limit(async () => {
       const worklogs = await fetchAllWorklogs(issue.key);
       issue.__worklogSeconds = sumWorklogSeconds(worklogs);
+      issue.__lastLoggedAt = getLastWorklogDateISO(worklogs);
       return issue;
     }),
   );
