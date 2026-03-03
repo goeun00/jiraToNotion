@@ -10,6 +10,15 @@ const {
   POLL_MINUTES,
 } = process.env;
 
+// 배열을 청크로 나누는 헬퍼 함수
+function chunkArray(array, chunkSize) {
+  const chunks = [];
+  for (let i = 0; i < array.length; i += chunkSize) {
+    chunks.push(array.slice(i, i + chunkSize));
+  }
+  return chunks;
+}
+
 // -------------------- Jira --------------------
 async function jiraFetch(path, options = {}) {
   const res = await fetch(`${JIRA_BASE_URL}${path}`, {
@@ -118,20 +127,46 @@ async function notionFetch(path, options = {}) {
   return json;
 }
 
-async function findPageByKey(issueKey) {
-  const body = {
-    filter: {
+async function findExistingNotionPages(issueKeys) {
+  if (issueKeys.length === 0) return new Map();
+
+  const pageMap = new Map();
+  const NOTION_FILTER_BATCH_SIZE = 100; // Notion의 'or' 필터는 최대 100개의 조건을 처리할 수 있음
+
+  const keyChunks = chunkArray(issueKeys, NOTION_FILTER_BATCH_SIZE);
+
+  const queryPromises = keyChunks.map(async (chunk) => {
+    const filterConditions = chunk.map((key) => ({
       property: "Key",
-      title: {
-        equals: issueKey,
+      rich_text: {
+        equals: key,
       },
-    },
-  };
-  const data = await notionFetch(`/databases/${NOTION_DATABASE_ID}/query`, {
-    method: "POST",
-    body: JSON.stringify(body),
+    }));
+    const body = {
+      filter: {
+        or: filterConditions,
+      },
+    };
+
+    const data = await notionFetch(`/databases/${NOTION_DATABASE_ID}/query`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+
+    for (const page of data.results || []) {
+      const keyProperty = page.properties?.Key?.rich_text
+        ?.map((t) => t.plain_text)
+        .join("")
+        .trim();
+      if (keyProperty) {
+        pageMap.set(keyProperty, page);
+      }
+    }
   });
-  return data.results?.[0] || null;
+
+  await Promise.all(queryPromises); // 모든 청크 쿼리를 병렬로 실행
+
+  return pageMap;
 }
 
 function issueToProps(issue) {
@@ -181,13 +216,16 @@ async function updatePage(pageId, issue) {
 // -------------------- Runner --------------------
 async function syncOnce() {
   const pLimit = (await import("p-limit")).default;
-  const limit = pLimit(5); // 동시에 5개만 처리
+  const jiraLimit = pLimit(5); // Jira 워크로그 가져오기 동시성 제한
+  const notionLimit = pLimit(5); // Notion 작업 동시성 제한 (Notion 레이트 리밋에 따라 조정)
+
   const start = Date.now();
   const issues = await fetchIssues();
   console.log(`Fetched ${issues.length} issues`);
 
+  // 1. 모든 워크로그를 병렬로 가져오기
   const worklogPromises = issues.map((issue) =>
-    limit(async () => {
+    jiraLimit(async () => {
       const worklogs = await fetchAllWorklogs(issue.key);
       issue.__worklogSeconds = sumWorklogSeconds(worklogs);
       issue.__lastLoggedAt = getLastWorklogDateISO(worklogs);
@@ -196,28 +234,38 @@ async function syncOnce() {
   );
   const issuesWithWorklog = await Promise.all(worklogPromises);
 
-  let created = 0;
-  let updated = 0;
+  // 2. 가져온 모든 Jira 이슈에 대해 기존 Notion 페이지를 대량으로 조회
+  const issueKeys = issuesWithWorklog.map((issue) => issue.key);
+  const existingNotionPages = await findExistingNotionPages(issueKeys);
+  console.log(`Found ${existingNotionPages.size} existing Notion pages.`);
 
-  // Notion 처리도 병렬화 가능 (rate limit 주의)
-  for (const issue of issuesWithWorklog) {
-    const key = issue.key;
-    const page = await findPageByKey(key);
+  const notionResults = await Promise.all(
+    issuesWithWorklog.map((issue) =>
+      notionLimit(async () => {
+        const key = issue.key;
+        const page = existingNotionPages.get(key);
 
-    if (!page) {
-      await createPage(issue);
-      created++;
-      console.log(
-        `+ created ${key} (worklog: ${Math.round((issue.__worklogSeconds / 3600) * 100) / 100}h)`,
-      );
-    } else {
-      await updatePage(page.id, issue);
-      updated++;
-      console.log(
-        `~ updated ${key} (worklog: ${Math.round((issue.__worklogSeconds / 3600) * 100) / 100}h)`,
-      );
-    }
-  }
+        if (!page) {
+          await createPage(issue);
+          console.log(
+            `+ created ${key} (worklog: ${Math.round((issue.__worklogSeconds / 3600) * 100) / 100}h)`,
+          );
+          return "created";
+        }
+
+        await updatePage(page.id, issue);
+        console.log(
+          `~ updated ${key} (worklog: ${Math.round((issue.__worklogSeconds / 3600) * 100) / 100}h)`,
+        );
+        return "updated";
+      }),
+    ),
+  );
+
+  // ✅ 집계는 여기서 한 번에
+  const created = notionResults.filter((r) => r === "created").length;
+  const updated = notionResults.filter((r) => r === "updated").length;
+
   const end = Date.now();
   const elapsed = ((end - start) / 1000).toFixed(2);
   console.log(`Done. created=${created}, updated=${updated}`);
