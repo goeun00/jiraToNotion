@@ -25,6 +25,12 @@ function chunkArray(array, chunkSize) {
   }
   return chunks;
 }
+function toMinuteEpoch(date) {
+  if (!date) return null;
+  const t = Date.parse(date);
+  if (Number.isNaN(t)) return null;
+  return Math.floor(t / 60000); // 분 단위(UTC 기준)
+}
 
 // -------------------- Jira --------------------
 async function jiraFetch(path, options = {}) {
@@ -158,7 +164,7 @@ function issueToProps(issue) {
   const reporter = fields.reporter?.displayName || fields.reporter?.name || "";
 
   const worklogSeconds = Number(issue.__worklogSeconds || 0);
-  const logged = Math.round((worklogSeconds / 28800) * 100) / 100;
+  const logged = Math.floor((worklogSeconds / 28800) * 100) / 100;
   const lastLoggedAt = issue.__lastLoggedAt || null;
 
   return {
@@ -227,16 +233,20 @@ async function syncOnce() {
     issuesWithWorklog.map((issue) =>
       notionLimit(async () => {
         const page = existingPages.get(issue.key);
-
         if (!page) {
           await createPage(NOTION_SOURCE_ID, issue);
           console.log(`+ created ${issue.key}`);
           return "created";
         }
-
-        await updatePage(page.id, issue);
-        console.log(`~ updated ${issue.key}`);
-        return "updated";
+        const notionUpdated = page.properties?.Updated?.date?.start;
+        const jiraUpdated = issue.fields?.updated;
+        if (toMinuteEpoch(notionUpdated) !== toMinuteEpoch(jiraUpdated)) {
+          await updatePage(page.id, issue);
+          console.log(`~ updated ${issue.key}`);
+          return "updated";
+        } else {
+          return "skipped";
+        }
       }),
     ),
   );
