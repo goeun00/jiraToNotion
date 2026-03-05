@@ -12,12 +12,8 @@ const {
   POLL_MINUTES,
 } = process.env;
 
-// -------------------- Notion SDK --------------------
-const notion = new Client({
-  auth: NOTION_TOKEN,
-});
-
 // -------------------- Helper --------------------
+
 function chunkArray(array, chunkSize) {
   const chunks = [];
   for (let i = 0; i < array.length; i += chunkSize) {
@@ -25,6 +21,7 @@ function chunkArray(array, chunkSize) {
   }
   return chunks;
 }
+
 function toMinuteEpoch(date) {
   if (!date) return null;
   const t = Date.parse(date);
@@ -54,7 +51,14 @@ async function jiraFetch(path, options = {}) {
 }
 
 async function fetchIssues() {
-  const fields = ["summary", "status", "updated", "reporter"].join(",");
+  const fields = [
+    "summary",
+    "status",
+    "updated",
+    "reporter",
+    "aggregatetimespent",
+    "worklog",
+  ].join(",");
   const pageSize = 100;
   let startAt = 0;
   let all = [];
@@ -77,49 +81,10 @@ async function fetchIssues() {
   return all;
 }
 
-async function fetchAllWorklogs(issueKey) {
-  let startAt = 0;
-  const maxResults = 100;
-  let all = [];
-
-  while (true) {
-    const data = await jiraFetch(
-      `/rest/api/2/issue/${issueKey}/worklog?startAt=${startAt}&maxResults=${maxResults}`,
-    );
-
-    const worklogs = data.worklogs || [];
-    all = all.concat(worklogs);
-    startAt += worklogs.length;
-
-    if (worklogs.length === 0 || startAt >= (data.total || 0)) break;
-  }
-
-  return all;
-}
-
-function sumWorklogSeconds(worklogs) {
-  return worklogs.reduce((sum, w) => sum + (w.timeSpentSeconds || 0), 0);
-}
-
-function getLastWorklogDateISO(worklogs) {
-  if (!worklogs?.length) return null;
-
-  let latest = null;
-
-  for (const w of worklogs) {
-    const raw = w.started || w.updated || w.created;
-    if (!raw) continue;
-
-    const t = Date.parse(raw);
-    if (Number.isNaN(t)) continue;
-
-    if (!latest || t > latest) latest = t;
-  }
-
-  return latest ? new Date(latest).toISOString() : null;
-}
-
 // -------------------- Notion --------------------
+const notion = new Client({
+  auth: NOTION_TOKEN,
+});
 
 async function findExistingNotionPages(NOTION_SOURCE_ID, issueKeys) {
   if (!issueKeys.length) return new Map();
@@ -201,7 +166,6 @@ async function updatePage(pageId, issue) {
 // -------------------- Runner --------------------
 async function syncOnce() {
   const pLimit = (await import("p-limit")).default;
-  const jiraLimit = pLimit(5);
   const notionLimit = pLimit(5);
 
   const start = Date.now();
@@ -209,16 +173,20 @@ async function syncOnce() {
   const issues = await fetchIssues();
   console.log(`Fetched ${issues.length} issues`);
 
-  const issuesWithWorklog = await Promise.all(
-    issues.map((issue) =>
-      jiraLimit(async () => {
-        const worklogs = await fetchAllWorklogs(issue.key);
-        issue.__worklogSeconds = sumWorklogSeconds(worklogs);
-        issue.__lastLoggedAt = getLastWorklogDateISO(worklogs);
-        return issue;
-      }),
-    ),
-  );
+  const issuesWithWorklog = issues.map((issue) => {
+    issue.__worklogSeconds = Number(issue.fields?.aggregatetimespent || 0);
+    const worklogs = issue.fields?.worklog?.worklogs || [];
+    let latest = null;
+    for (const w of worklogs) {
+      const raw = w.started || w.updated || w.created;
+      if (!raw) continue;
+      const t = Date.parse(raw);
+      if (Number.isNaN(t)) continue;
+      if (!latest || t > latest) latest = t;
+    }
+    issue.__lastLoggedAt = latest ? new Date(latest).toISOString() : null;
+    return issue;
+  });
 
   const issueKeys = issuesWithWorklog.map((i) => i.key);
 
