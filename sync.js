@@ -3,14 +3,8 @@ require("dotenv").config();
 
 const { Client } = require("@notionhq/client");
 
-const {
-  JIRA_BASE_URL,
-  JIRA_PAT,
-  NOTION_TOKEN,
-  NOTION_SOURCE_ID,
-  JQL,
-  POLL_MINUTES,
-} = process.env;
+const { JIRA_BASE_URL, JIRA_PAT, NOTION_TOKEN, NOTION_SOURCE_ID_JIRA, JQL } =
+  process.env;
 
 // -------------------- Helper --------------------
 
@@ -41,7 +35,7 @@ async function jiraFetch(path, options = {}) {
 
 async function fetchIssues() {
   const fields =
-    "summary,status,updated,reporter,aggregatetimespent,worklog,description";
+    "summary,status,updated,created,reporter,aggregatetimespent,worklog,description";
 
   const pageSize = 1000;
   let startAt = 0;
@@ -64,13 +58,13 @@ const notion = new Client({
   auth: NOTION_TOKEN,
 });
 
-async function getAllNotionPagesMap(NOTION_SOURCE_ID) {
+async function getAllNotionPagesMap(NOTION_SOURCE_ID_JIRA) {
   const pageMap = new Map();
   let cursor = undefined;
 
   while (true) {
     const res = await notion.dataSources.query({
-      data_source_id: NOTION_SOURCE_ID,
+      data_source_id: NOTION_SOURCE_ID_JIRA,
       start_cursor: cursor,
       page_size: 100,
     });
@@ -100,6 +94,7 @@ function issueToProps(issue) {
   const summary = fields.summary || "";
   const status = fields.status?.name || "";
   const updated = fields.updated || "";
+  const created = fields.created || "";
   const reporter = fields.reporter?.displayName || fields.reporter?.name || "";
 
   const worklogSeconds = Number(issue.__worklogSeconds || 0);
@@ -109,8 +104,9 @@ function issueToProps(issue) {
   return {
     Title: { title: [{ text: { content: summary } }] },
     Key: { rich_text: [{ text: { content: key } }] },
-    Status: status ? { select: { name: status } } : { select: null },
+    Status: status ? { status: { name: status } } : { status: null },
     Updated: updated ? { date: { start: updated } } : { date: null },
+    Created: created ? { date: { start: created } } : { date: null },
     URL: { url: `${JIRA_BASE_URL}/browse/${key}` },
     Logged: { number: logged },
     Reporter: { rich_text: [{ text: { content: reporter } }] },
@@ -120,11 +116,11 @@ function issueToProps(issue) {
   };
 }
 
-async function createPage(NOTION_SOURCE_ID, issue) {
+async function createPage(NOTION_SOURCE_ID_JIRA, issue) {
   return notion.pages.create({
     parent: {
       type: "data_source_id",
-      data_source_id: NOTION_SOURCE_ID,
+      data_source_id: NOTION_SOURCE_ID_JIRA,
     },
     properties: issueToProps(issue),
     children: [
@@ -153,6 +149,12 @@ async function updatePage(pageId, issue) {
   });
 }
 
+async function deletePage(pageId) {
+  return notion.pages.update({
+    page_id: pageId,
+    archived: true,
+  });
+}
 // -------------------- Runner --------------------
 async function syncOnce() {
   const pLimit = (await import("p-limit")).default;
@@ -166,6 +168,7 @@ async function syncOnce() {
     issue.__worklogSeconds = Number(issue.fields?.aggregatetimespent || 0);
     const worklogs = issue.fields?.worklog?.worklogs || [];
     let latest = null;
+
     for (const w of worklogs) {
       const raw = w.started || w.updated || w.created;
       if (!raw) continue;
@@ -173,22 +176,28 @@ async function syncOnce() {
       if (Number.isNaN(t)) continue;
       if (!latest || t > latest) latest = t;
     }
+
     issue.__lastLoggedAt = latest ? new Date(latest).toISOString() : null;
     return issue;
   });
 
-  // ✅ 기존 페이지 일괄 조회
-  const existingPages = await getAllNotionPagesMap(NOTION_SOURCE_ID);
+  // Jira key set
+  const jiraKeys = new Set(issues.map((i) => i.key));
 
-  // ✅ create/update 실행
-  let created = 0,
-    updated = 0;
+  // 기존 Notion 페이지 조회
+  const existingPages = await getAllNotionPagesMap(NOTION_SOURCE_ID_JIRA);
+
+  let created = 0;
+  let updated = 0;
+  let deleted = 0;
+
+  // create / update
   await Promise.all(
     issuesWithWorklog.map((issue) =>
       notionLimit(async () => {
         const page = existingPages.get(issue.key);
         if (!page) {
-          await createPage(NOTION_SOURCE_ID, issue);
+          await createPage(NOTION_SOURCE_ID_JIRA, issue);
           created++;
           console.log(`+ created ${issue.key}`);
           return;
@@ -199,27 +208,34 @@ async function syncOnce() {
           await updatePage(page.id, issue);
           updated++;
           console.log(`~ updated ${issue.key}`);
-        } else {
+        }
+      }),
+    ),
+    [...existingPages.entries()].map(([key, page]) =>
+      notionLimit(async () => {
+        if (!jiraKeys.has(key)) {
+          await deletePage(page.id);
+          deleted++;
+          console.log(`- deleted ${key}`);
         }
       }),
     ),
   );
   const end = Date.now();
   const elapsed = ((end - start) / 1000).toFixed(2);
-  if (updated || created) {
-    console.log(`Done. created=${created}, updated=${updated}`);
+  if (updated || created || deleted) {
+    console.log(
+      `Done. created=${created}, updated=${updated}, deleted=${deleted}`,
+    );
   }
   console.log(`Elapsed time: ${elapsed}s`);
 }
 
-async function main() {
-  const minutes = Number(POLL_MINUTES || 5);
-  await syncOnce().catch(console.error);
-  setInterval(
-    () => {
-      syncOnce().catch(console.error);
-    },
-    minutes * 60 * 1000,
-  );
+async function loop() {
+  const minutes = Number(5);
+  while (true) {
+    await syncOnce().catch(console.error);
+    await new Promise((r) => setTimeout(r, minutes * 60 * 1000));
+  }
 }
-main();
+loop();
