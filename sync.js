@@ -7,9 +7,10 @@ const {
   getAllGitPRMap,
   createPRPage,
 } = require("./notion");
-const { fetchPRs } = require("./github");
+const { fetchPRs, fetchPRFiles } = require("./github");
 
 async function syncGitPRs() {
+  const start = Date.now();
   const pLimit = (await import("p-limit")).default;
   const myPRs = await fetchPRs();
   const existingPRs = await getAllGitPRMap();
@@ -18,19 +19,27 @@ async function syncGitPRs() {
     myPRs.map((pr) =>
       limit(async () => {
         if (!existingPRs.has(pr.html_url)) {
-          await createPRPage(pr);
+          const owner = pr.base.repo.owner.login;
+          const repo = pr.base.repo.name;
+          const files = await fetchPRFiles(owner, repo, pr.number);
+          await createPRPage(pr, files);
           existingPRs.set(pr.html_url, true);
           console.log(`+ created PR: ${pr.title}`);
         }
       }),
     ),
   );
+  const end = Date.now();
+  const elapsed = ((end - start) / 1000).toFixed(2);
   console.log(`Fetched ${myPRs.length} PRs`);
+  console.log(`Elapsed time: ${elapsed}s`);
 }
 
-async function syncOnce() {
+async function syncJiraIssues() {
+  const start = Date.now();
   const pLimit = (await import("p-limit")).default;
   const notionLimit = pLimit(3);
+
   const issues = await fetchIssues();
   console.log(`Fetched ${issues.length} issues`);
 
@@ -83,7 +92,6 @@ async function syncOnce() {
         }
       }),
     ),
-
     ...[...existingPages.entries()].map(([key, page]) =>
       notionLimit(async () => {
         if (!jiraKeys.has(key)) {
@@ -94,14 +102,19 @@ async function syncOnce() {
       }),
     ),
   ]);
-
+  const end = Date.now();
+  const elapsed = ((end - start) / 1000).toFixed(2);
   console.log(`created=${created}, updated=${updated}, deleted=${deleted}`);
+  console.log(`Elapsed time: ${elapsed}s`);
+}
+
+async function syncOnce() {
+  await syncJiraIssues();
   await syncGitPRs();
 }
 
 async function loop() {
   const minutes = 5;
-
   while (true) {
     await syncOnce().catch(console.error);
     await new Promise((r) => setTimeout(r, minutes * 60 * 1000));

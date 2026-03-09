@@ -1,6 +1,6 @@
 require("dotenv").config();
 const twoMonthsAgo = new Date();
-twoMonthsAgo.setMonth(twoMonthsAgo.getMonth() - 2);
+twoMonthsAgo.setMonth(twoMonthsAgo.getMonth() - 6);
 const since = twoMonthsAgo.toISOString().split("T")[0];
 const { GITHUB_TOKEN, GITHUB_USERNAME, GITHUB_URL } = process.env;
 
@@ -41,4 +41,28 @@ async function fetchPRs() {
   return prs;
 }
 
-module.exports = { fetchPRs };
+async function fetchPRFiles(owner, repo, prNumber) {
+  let page = 1;
+  const allFiles = [];
+
+  while (true) {
+    const res = await fetch(
+      `${GITHUB_URL}/api/v3/repos/${owner}/${repo}/pulls/${prNumber}/files?per_page=100&page=${page}`,
+      {
+        headers: {
+          Authorization: `token ${GITHUB_TOKEN}`,
+          Accept: "application/vnd.github+json",
+        },
+      },
+    );
+    if (!res.ok) {
+      throw new Error(`GitHub API error ${res.status}`);
+    }
+    const files = await res.json();
+    allFiles.push(...files);
+    if (files.length < 100) break;
+    page++;
+  }
+  return allFiles;
+}
+module.exports = { fetchPRs, fetchPRFiles };

@@ -25,7 +25,6 @@ async function getAllNotionPagesMap() {
       start_cursor: cursor,
       page_size: 100,
     });
-
     (res.results || []).forEach((page) => {
       const keyText = page.properties?.Key?.rich_text
         ?.map((t) => t.plain_text)
@@ -36,11 +35,9 @@ async function getAllNotionPagesMap() {
         pageMap.set(keyText, page);
       }
     });
-
     if (!res.has_more) break;
     cursor = res.next_cursor;
   }
-
   return pageMap;
 }
 
@@ -49,18 +46,14 @@ async function getAllNotionPagesMap() {
 function jiraProps(issue) {
   const key = issue.key;
   const fields = issue.fields || {};
-
   const summary = fields.summary || "";
   const status = fields.status?.name || "";
   const updated = fields.updated || "";
   const created = fields.created || "";
   const reporter = fields.reporter?.displayName || fields.reporter?.name || "";
-
   const worklogSeconds = Number(issue.__worklogSeconds || 0);
   const logged = Math.floor((worklogSeconds / 28800) * 100) / 100;
-
   const lastLoggedAt = issue.__lastLoggedAt || null;
-
   return {
     Title: { title: [{ text: { content: summary } }] },
     Key: { rich_text: [{ text: { content: key } }] },
@@ -76,6 +69,135 @@ function jiraProps(issue) {
   };
 }
 
+function checkNaming(files = []) {
+  const issues = [];
+  const pascalCase = /^[A-Z][a-zA-Z0-9]+$/;
+  const snakeCase = /^[a-z0-9]+(_[a-z0-9]+)*$/;
+  for (const file of files) {
+    if (file.status === "renamed" || file.status === "removed") {
+      continue;
+    }
+    const name = file.filename.split("/").pop();
+    const base = name.replace(/\.[^/.]+$/, "");
+    if (file.filename.includes("/components/")) {
+      if (!pascalCase.test(base)) {
+        issues.push(`Component : ${name}`);
+      }
+    }
+    if (file.filename.includes("/pages/") || name.endsWith(".css")) {
+      if (!snakeCase.test(base)) {
+        issues.push(`Page/CSS : ${name}`);
+      }
+    }
+  }
+  return issues;
+}
+
+function buildFileBlocks(files = []) {
+  const totalFiles = files.length;
+  const namingIssues = checkNaming(files);
+  const additions = files.reduce((sum, f) => sum + (f.additions || 0), 0);
+  const deletions = files.reduce((sum, f) => sum + (f.deletions || 0), 0);
+  const complexity = Math.round((additions + deletions) / totalFiles);
+  const workspaceSet = new Set();
+  for (const { filename } of files) {
+    const match = filename.match(/^workspaces\/([^/]+)/);
+    if (match) workspaceSet.add(match[1]);
+  }
+  const summaryLines = [
+    "━━━━━━━━━━━━━━━━━━",
+    "📊 PR Summary",
+    "━━━━━━━━━━━━━━━━━━",
+    `Files      : ${totalFiles}`,
+    `Additions  : +${additions}`,
+    `Deletions  : -${deletions}`,
+    `Complexity : 🔥 ${complexity}`,
+  ];
+  if (workspaceSet.size) {
+    summaryLines.push(
+      "",
+      "📦 Workspaces",
+      ...[...workspaceSet].sort().map((w) => `• ${w}`),
+    );
+  }
+  if (namingIssues.length) {
+    summaryLines.push(
+      "",
+      "⚠ Naming Issues",
+      ...namingIssues.slice(0, 10).map((i) => `• ${i}`),
+    );
+  }
+  return [
+    {
+      object: "block",
+      type: "code",
+      code: {
+        language: "plain text",
+        rich_text: [
+          {
+            type: "text",
+            text: { content: summaryLines.join("\n") },
+          },
+        ],
+      },
+    },
+  ];
+}
+function buildCssBlocks(files = [], repo) {
+  const links = new Set();
+  const publishMatch = repo.match(/^Publish\.(IAC|GMKT)\.(Mobile|PC)$/);
+  for (const file of files) {
+    const path = file.filename || "";
+    if (publishMatch) {
+      if (!/\.(css|js)$/.test(path)) continue;
+      const brandMap = { IAC: "auction", GMKT: "gmarket" };
+      const deviceMap = { Mobile: "mobile", PC: "pc" };
+      const brand = brandMap[publishMatch[1]];
+      const device = deviceMap[publishMatch[2]];
+      links.add(`https://script.${brand}.co.kr/${device}/${path}`);
+      continue;
+    }
+    if (!path.endsWith(".css")) continue;
+    const match = path.match(
+      /^workspaces\/(gmarket|auction)-(desktop|mobile).*html\/([^/]+)/,
+    );
+    if (!match) continue;
+    const [, brand, device, page] = match;
+    links.add(
+      `https://script.${brand}.co.kr/${repo}/${device}/css/${page}/${page}.css`,
+    );
+  }
+  const cssLinks = [...links];
+  if (!cssLinks.length) return [];
+
+  return [
+    {
+      object: "block",
+      type: "code",
+      code: {
+        language: "plain text",
+        rich_text: [
+          {
+            type: "text",
+            text: {
+              content:
+                "━━━━━━━━━━━━━━━━━━\n🔗 CSS/JS Patch\n━━━━━━━━━━━━━━━━━━\n",
+            },
+          },
+          ...cssLinks.map((url, i) => ({
+            type: "text",
+            text: {
+              content: `${url.replace(/^https:/, "")}${
+                i < cssLinks.length - 1 ? "\n" : ""
+              }`,
+              link: { url },
+            },
+          })),
+        ],
+      },
+    },
+  ];
+}
 // -------------------- CRUD --------------------
 async function createPage(issue) {
   return notion.pages.create({
@@ -142,8 +264,9 @@ async function getAllGitPRMap() {
   return pageMap;
 }
 
-async function createPRPage(pr) {
+async function createPRPage(pr, files) {
   let prStatus;
+  const repo = pr.base.repo.name;
   if (pr.merged_at) {
     prStatus = "Merged";
   } else if (pr.state === "open") {
@@ -151,20 +274,14 @@ async function createPRPage(pr) {
   } else {
     prStatus = "Closed";
   }
-  return notion.pages.create({
+  const page = await notion.pages.create({
     parent: {
       type: "data_source_id",
       data_source_id: NOTION_SOURCE_ID_GIT,
     },
     properties: {
       Title: {
-        title: [
-          {
-            text: {
-              content: pr.title,
-            },
-          },
-        ],
+        title: [{ text: { content: pr.title } }],
       },
       Url: {
         url: pr.html_url,
@@ -183,6 +300,16 @@ async function createPRPage(pr) {
       },
     },
   });
+
+  const blocks = buildFileBlocks(files);
+  const cssBlocks = buildCssBlocks(files, repo);
+
+  await notion.blocks.children.append({
+    block_id: page.id,
+    children: [...blocks, ...cssBlocks],
+  });
+
+  return page;
 }
 module.exports = {
   getAllNotionPagesMap,

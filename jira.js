@@ -21,12 +21,10 @@ async function jiraFetch(path, options = {}) {
     },
     body: options.body,
   });
-
   if (!res.ok) {
     const txt = await res.text();
     throw new Error(`Jira API error ${res.status}: ${txt}`);
   }
-
   const text = await res.text();
   return text ? JSON.parse(text) : {};
 }
@@ -36,7 +34,6 @@ async function jiraFetch(path, options = {}) {
 async function fetchIssues() {
   const fields =
     "summary,status,updated,created,reporter,aggregatetimespent,worklog,description";
-
   const pageSize = 1000;
   let startAt = 0;
   const all = [];
