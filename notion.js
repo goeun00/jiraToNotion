@@ -1,13 +1,12 @@
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
 require("dotenv").config();
-
 const { Client } = require("@notionhq/client");
 
 const {
   NOTION_TOKEN,
   NOTION_SOURCE_ID_JIRA,
   JIRA_BASE_URL,
-  NOTION_SOURCE_ID_GIT,
+  NOTION_SOURCE_ID_PR,
 } = process.env;
 
 const notion = new Client({
@@ -42,7 +41,6 @@ async function getAllNotionPagesMap() {
 }
 
 // -------------------- Props --------------------
-
 function jiraProps(issue) {
   const key = issue.key;
   const fields = issue.fields || {};
@@ -224,31 +222,28 @@ async function createPage(issue) {
     ],
   });
 }
-
 async function updatePage(pageId, issue) {
   return notion.pages.update({
     page_id: pageId,
     properties: jiraProps(issue),
   });
 }
-
 async function deletePage(pageId) {
   return notion.pages.update({
     page_id: pageId,
     archived: true,
   });
 }
+
 async function getAllGitPRMap() {
   const pageMap = new Map();
   let cursor = undefined;
-
   while (true) {
     const res = await notion.dataSources.query({
-      data_source_id: NOTION_SOURCE_ID_GIT,
+      data_source_id: NOTION_SOURCE_ID_PR,
       start_cursor: cursor,
       page_size: 100,
     });
-
     (res.results || []).forEach((page) => {
       const url = page.properties?.Url?.url;
 
@@ -256,28 +251,25 @@ async function getAllGitPRMap() {
         pageMap.set(url, page);
       }
     });
-
     if (!res.has_more) break;
     cursor = res.next_cursor;
   }
-
   return pageMap;
 }
 
+function getPRStatus(pr) {
+  if (pr.merged_at) return "Merged";
+  if (pr.state === "open") return "Open";
+  return "Closed";
+}
+
 async function createPRPage(pr, files) {
-  let prStatus;
   const repo = pr.base.repo.name;
-  if (pr.merged_at) {
-    prStatus = "Merged";
-  } else if (pr.state === "open") {
-    prStatus = "Open";
-  } else {
-    prStatus = "Closed";
-  }
+  const prStatus = getPRStatus(pr);
   const page = await notion.pages.create({
     parent: {
       type: "data_source_id",
-      data_source_id: NOTION_SOURCE_ID_GIT,
+      data_source_id: NOTION_SOURCE_ID_PR,
     },
     properties: {
       Title: {
@@ -292,6 +284,9 @@ async function createPRPage(pr, files) {
       Created: {
         date: { start: pr.created_at },
       },
+      LastUpdated: {
+        date: { start: pr.updated_at },
+      },
       Repository: {
         select: { name: pr.base.repo.name },
       },
@@ -303,14 +298,39 @@ async function createPRPage(pr, files) {
 
   const blocks = buildFileBlocks(files);
   const cssBlocks = buildCssBlocks(files, repo);
-
   await notion.blocks.children.append({
     block_id: page.id,
     children: [...blocks, ...cssBlocks],
   });
-
   return page;
 }
+
+async function updatePRPage(page, pr) {
+  const prStatus = getPRStatus(pr);
+
+  await notion.pages.update({
+    page_id: page.id,
+    properties: {
+      Title: {
+        title: [{ text: { content: pr.title } }],
+      },
+      Status: {
+        status: { name: prStatus },
+      },
+      Target: {
+        select: { name: pr.base.ref },
+      },
+      Repository: {
+        select: { name: pr.base.repo.name },
+      },
+      LastUpdated: {
+        date: { start: pr.updated_at },
+      },
+    },
+  });
+  console.log(`~ updated PR: ${pr.title}`);
+}
+
 module.exports = {
   getAllNotionPagesMap,
   createPage,
@@ -318,4 +338,5 @@ module.exports = {
   deletePage,
   getAllGitPRMap,
   createPRPage,
+  updatePRPage,
 };

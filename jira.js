@@ -1,13 +1,7 @@
 require("dotenv").config();
-
-const { JIRA_BASE_URL, JIRA_PAT, JQL } = process.env;
-
-// -------------------- Helper --------------------
-
-function toMinuteEpoch(date) {
-  if (!date) return null;
-  return Math.floor(Date.parse(date) / 60000);
-}
+const { JIRA_BASE_URL, JIRA_PAT } = process.env;
+const JQL =
+  "(assignee = currentUser() OR watcher = currentUser()) AND (  statusCategory != Done  OR (statusCategory = Done AND created >= -60d)) ORDER BY updated DESC";
 
 // -------------------- Jira Fetch --------------------
 
@@ -56,5 +50,4 @@ async function fetchIssues() {
 
 module.exports = {
   fetchIssues,
-  toMinuteEpoch,
 };

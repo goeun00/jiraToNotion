@@ -1,4 +1,8 @@
-const { fetchIssues, toMinuteEpoch } = require("./jira");
+const path = require("path");
+require("dotenv").config({
+  path: path.resolve(__dirname, ".env"),
+});
+const { fetchIssues } = require("./jira");
 const {
   getAllNotionPagesMap,
   createPage,
@@ -6,25 +10,42 @@ const {
   deletePage,
   getAllGitPRMap,
   createPRPage,
+  updatePRPage,
 } = require("./notion");
 const { fetchPRs, fetchPRFiles } = require("./github");
 
+// -------------------- Helper --------------------
+
+function toMinuteEpoch(date) {
+  if (!date) return null;
+  return Math.floor(Date.parse(date) / 60000);
+}
+
 async function syncGitPRs() {
   const start = Date.now();
+  console.log(`starting GitHub PR sync...`);
   const pLimit = (await import("p-limit")).default;
   const myPRs = await fetchPRs();
   const existingPRs = await getAllGitPRMap();
   const limit = pLimit(3);
+
   await Promise.all(
     myPRs.map((pr) =>
       limit(async () => {
-        if (!existingPRs.has(pr.html_url)) {
-          const owner = pr.base.repo.owner.login;
-          const repo = pr.base.repo.name;
+        let page = existingPRs.get(pr.html_url);
+        const owner = pr.base.repo.owner.login;
+        const repo = pr.base.repo.name;
+        if (!page) {
           const files = await fetchPRFiles(owner, repo, pr.number);
-          await createPRPage(pr, files);
-          existingPRs.set(pr.html_url, true);
+          const createdPage = await createPRPage(pr, files);
+          existingPRs.set(pr.html_url, createdPage);
           console.log(`+ created PR: ${pr.title}`);
+          return;
+        }
+        const props = page.properties;
+        const notionUpdated = props.LastUpdated?.date?.start;
+        if (toMinuteEpoch(notionUpdated) !== toMinuteEpoch(pr.updated_at)) {
+          await updatePRPage(page, pr);
         }
       }),
     ),
@@ -81,10 +102,8 @@ async function syncJiraIssues() {
           console.log(`+ created ${issue.key}`);
           return;
         }
-
         const notionUpdated = page.properties?.Updated?.date?.start;
         const jiraUpdated = issue.fields?.updated;
-
         if (toMinuteEpoch(notionUpdated) !== toMinuteEpoch(jiraUpdated)) {
           await updatePage(page.id, issue);
           updated++;
@@ -113,12 +132,24 @@ async function syncOnce() {
   await syncGitPRs();
 }
 
-async function loop() {
-  const minutes = 5;
-  while (true) {
+let running = false;
+async function autoSync(minutes = 3) {
+  running = true;
+  await syncOnce();
+  while (running) {
     await syncOnce().catch(console.error);
+
     await new Promise((r) => setTimeout(r, minutes * 60 * 1000));
   }
 }
+function stopAutoSync() {
+  running = false;
+}
 
-loop();
+module.exports = {
+  syncOnce,
+  syncJiraIssues,
+  syncGitPRs,
+  autoSync,
+  stopAutoSync,
+};

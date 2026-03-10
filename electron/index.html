@@ -1,0 +1,139 @@
+<!doctype html>
+<html data-theme="light">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Jira → Notion Sync</title>
+    <link rel="stylesheet" href="style.css" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Noto+Sans+KR:wght@100..900&display=swap"
+      rel="stylesheet"
+    />
+    <script
+      src="https://kit.fontawesome.com/9a24552766.js"
+      crossorigin="anonymous"
+    ></script>
+  </head>
+
+  <body>
+    <div class="wrapper">
+      <div class="titlebar">
+        <div class="window-controls">
+          <!-- <button id="themeToggle" class="theme-toggle">
+            <i class="fa-solid fa-moon"></i>
+          </button> -->
+          <button id="min"><i class="fa-solid fa-minus"></i></button>
+          <!-- <button id="max"><i class="fa-regular fa-square"></i></button> -->
+          <button id="close"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+      </div>
+      <div class="container">
+        <!-- left -->
+        <div>
+          <!-- <div class="header">Notion<br />Flow</div> -->
+          <div class="card token">
+            <div class="box">
+              <h2><i class="fa-brands fa-notion"></i> Notion</h2>
+              <div class="field">
+                <label for="notionToken">Token</label>
+                <input class="input" id="notionToken" />
+                <span class="info" aria-hint="Notion API 접근 토큰"></span>
+              </div>
+              <div class="field">
+                <label for="notionJiraDb">Jira Data ID</label>
+                <input class="input" id="notionJiraDb" />
+                <span class="info" aria-hint="Jira 이슈 데이터베이스"></span>
+              </div>
+              <div class="field">
+                <label for="notionPrDb">PR Data ID</label>
+                <input class="input" id="notionPrDb" />
+                <span class="info" aria-hint="PR 링크 저장 DB"></span>
+              </div>
+            </div>
+            <div class="box">
+              <h2><i class="fa-brands fa-jira"></i>Jira</h2>
+              <div class="field">
+                <label for="jiraUrl">Base URL</label>
+                <input class="input" id="jiraUrl" />
+                <span
+                  class="info"
+                  aria-hint="예: https://jira.company.com"
+                ></span>
+              </div>
+              <div class="field">
+                <label for="jiraPat">Token</label>
+                <input class="input" id="jiraPat" />
+                <span class="info" aria-hint="Jira API 인증 PAT"></span>
+              </div>
+            </div>
+            <div class="box">
+              <h2><i class="fa-brands fa-github"></i>Github</h2>
+              <div class="field">
+                <label for="githubUrl">Github URL</label>
+                <input class="input" id="githubUrl" />
+                <span class="info" aria-hint="PR 검색용 API URL"></span>
+              </div>
+              <div class="field">
+                <label for="githubToken">Token</label>
+                <input class="input" id="githubToken" />
+                <span class="info" aria-hint="GitHub API Token"></span>
+              </div>
+              <div class="field">
+                <label for="githubUser">Username</label>
+                <input class="input" id="githubUser" />
+                <span class="info" aria-hint="PR author 검색"></span>
+              </div>
+            </div>
+            <button id="saveEnv" class="soft-button square primary">
+              <i class="fa-solid fa-check"></i>
+            </button>
+          </div>
+        </div>
+        <!-- right -->
+        <div class="right">
+          <div class="card box_log">
+           <h3>
+              NotionFlow<br>consle
+              <button class="soft-button square logclear" id="clearLog">
+                <i class="fa-solid fa-eraser"></i>
+              </button>
+            </h3>
+            <pre id="log">sync...</pre>
+          </div>
+          <div class="card">
+            <div class="button-row">
+              <button class="soft-button" id="syncJira">
+                Sync Jira<i class="fa-solid fa-arrows-rotate"></i>
+              </button>
+              <button class="soft-button" id="syncPR">
+                Sync PR<i class="fa-solid fa-arrows-rotate"></i>
+              </button>
+              <label class="toggle">
+                <input type="checkbox" id="autoSync" checked />
+                <span class="toggle_icon"></span>
+                <span class="label">auto</span>
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script src="renderer.js"></script>
+    <script>
+      const toggleBtn = document.getElementById("themeToggle");
+      if (toggleBtn) {
+        toggleBtn.addEventListener("click", () => {
+          const root = document.documentElement;
+          const theme = root.getAttribute("data-theme");
+
+          if (theme === "dark") {
+            root.setAttribute("data-theme", "light");
+            toggleBtn.innerHTML = '<i class="fa-solid fa-sun"></i>';
+          } else {
+            root.setAttribute("data-theme", "dark");
+            toggleBtn.innerHTML = '<i class="fa-solid fa-moon"></i>';
+          }
+        });
+      }
+    </script>
+  </body>
+</html>

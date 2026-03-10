@@ -15,7 +15,6 @@ async function fetchPRs() {
       },
     },
   );
-
   if (!res.ok) {
     const txt = await res.text();
     throw new Error(`GitHub API error ${res.status}: ${txt}`);
@@ -37,7 +36,6 @@ async function fetchPRs() {
     const pr = await prRes.json();
     prs.push(pr);
   }
-
   return prs;
 }
 
