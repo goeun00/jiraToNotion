@@ -16,4 +16,12 @@ contextBridge.exposeInMainWorld("api", {
   syncOnce: () => ipcRenderer.invoke("sync-once"),
   autoSync: () => ipcRenderer.invoke("auto-sync"),
   stopAutoSync: () => ipcRenderer.invoke("stop-auto-sync"),
+
+  // 코드 리뷰
+  runCodeReview: (owner, repo, base, compare) =>
+    ipcRenderer.invoke("run-code-review", owner, repo, base, compare),
+
+  // 저장소 설정 관리 (repo configs: [{ name, branches }])
+  loadRepoConfigs: () => ipcRenderer.invoke("load-repo-configs"),
+  saveRepoConfigs: (configs) => ipcRenderer.invoke("save-repo-configs", configs),
 });

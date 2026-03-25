@@ -11,8 +11,10 @@ const {
   getAllGitPRMap,
   createPRPage,
   updatePRPage,
+  createReviewPage,
 } = require("./notion");
-const { fetchPRs, fetchPRFiles } = require("./github");
+const { fetchPRs, fetchPRFiles, fetchBranchDiff } = require("./github");
+const { runCodeReview } = require("./review");
 
 // -------------------- Helper --------------------
 
@@ -127,6 +129,36 @@ async function syncJiraIssues() {
   console.log(`Elapsed time: ${elapsed}s`);
 }
 
+/**
+ * 코드리뷰 싱크
+ * @param {string} owner - 조직명 (org-publisher)
+ * @param {string} repo
+ * @param {string} base
+ * @param {string} compare
+ */
+async function syncCodeReview(owner, repo, base, compare) {
+  const start = Date.now();
+  console.log(`starting Code Review: ${repo} ${compare} → ${base}`);
+
+  console.log(`fetching diff...`);
+  const { diffText, prUrl } = await fetchBranchDiff(owner, repo, base, compare);
+
+  if (!diffText || diffText.trim().length === 0) {
+    console.log(`no diff found between ${base} and ${compare}`);
+    return;
+  }
+
+  console.log(`running Gemini review...`);
+  const { summary, fileReviews } = await runCodeReview(diffText, repo, base, compare);
+
+  console.log(`creating Notion review page...`);
+  await createReviewPage({ repo, base, compare, prUrl, summary, fileReviews });
+
+  const elapsed = ((Date.now() - start) / 1000).toFixed(2);
+  console.log(`+ created review: ${repo} ${compare}→${base}`);
+  console.log(`Elapsed time: ${elapsed}s`);
+}
+
 async function syncOnce() {
   await syncJiraIssues();
   await syncGitPRs();
@@ -137,9 +169,9 @@ async function autoSync(minutes = 3) {
   running = true;
   await syncOnce();
   while (running) {
-    await syncOnce().catch(console.error);
-
     await new Promise((r) => setTimeout(r, minutes * 60 * 1000));
+    if (!running) break;
+    await syncOnce().catch(console.error);
   }
 }
 function stopAutoSync() {
@@ -150,6 +182,7 @@ module.exports = {
   syncOnce,
   syncJiraIssues,
   syncGitPRs,
+  syncCodeReview,
   autoSync,
   stopAutoSync,
 };

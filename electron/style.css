@@ -1,434 +1,848 @@
-/* -----------------------------
-   Design Tokens
------------------------------ */
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap");
+
+/* ─────────────────────────────────────
+   테마 토큰
+───────────────────────────────────── */
 :root {
-  --radius: 8px;
-  --radius-lg: 17px;
-  --radius-xl: 30px;
-  --transition: 0.15s ease;
-  --shadow-raised:
-    -8px -8px 16px rgba(var(--light), 0.7),
-    inset 8px 8px 14px rgba(var(--shadow), 0.04),
-    8px 8px 12px rgba(var(--shadow), 0.2),
-    inset -8px -8px 16px rgba(var(--light), 0.4);
-  --shadow-pressed:
-    inset -6px -6px 12px rgba(var(--light), 0.8),
-    inset 6px 6px 16px rgba(var(--shadow), 0.2);
-  --shadow-pressed-light:
-    inset -6px -6px 16px rgba(var(--light), 0.9),
-    inset 6px 6px 18px rgba(var(--shadow), 0.15),
-    8px 8px 12px rgba(var(--shadow), 0.1);
+  --radius-device: 40px;
+  --transition: 0.12s ease;
 }
-[data-theme="dark"] {
-  --light: 0, 0, 0;
-  --shadow: 120, 140, 170;
-  --bg: #191b1f;
-  --bg-item: #171a21;
-  --bg-hover: #2c3345;
-  --text: #9aa3b2;
-  --text-dim: #8b93a7;
-  --primary: #4c7fff;
+
+[data-theme="s"] {
+  --body-bg: #e4e4e4;
+  --body-border: #c0c0c0;
+  --body-sh1: #b0b0b0;
+  --body-sh2: #9a9a9a;
+  --body-hi: #f8f8f8;
+  --wheel-bg: #d4d4d4;
+  --wheel-bd: #b8b8b8;
+  --wheel-sh: #aaa;
+  --wheel-hi: #eee;
+  --wlbl-color: #666;
+  --center-bg: #c4c4c4;
+  --center-bd: #b0b0b0;
+  --center-hi: #d8d8d8;
+  --center-dot: #aaa;
+  --lcd-bg: #c8dba0;
+  --lcd-text: #1a2a08;
+  --lcd-dim: #3a6a18;
+  --lcd-sel-bg: #1a4a08;
+  --lcd-sel-fg: #e8f8d8;
+  --lcd-auto-bg: rgba(26, 74, 8, 0.14);
+  --lcd-div: rgba(0, 0, 0, 0.12);
+  --lcd-cfg-bg: rgba(0, 0, 0, 0.07);
+  --prog-fill: #1a4a08;
+  --brand-color: #999;
+  --wctrl-close: rgb(220, 100, 100);
+  --wctrl-min: rgb(210, 165, 55);
 }
-[data-theme="light"] {
-  --light: 255, 255, 255;
-  --shadow: 120, 140, 170;
-  --bg: #f3f5fa; /* #eef1f6 → 조금 밝게 */
-  --bg-item: #eef2f7; /* #e9edf3 → 밝게 */
-  --bg-hover: #e9edf5; /* #e3e8f1 → 살짝 밝게 */
-  --text: #6b778c;
-  --text-dim: #8e99ab;
-  --primary: #6e94df;
+[data-theme="bk"] {
+  --body-bg: #1e1e20;
+  --body-border: #3a3a3c;
+  --body-sh1: #0a0a0a;
+  --body-sh2: #050505;
+  --body-hi: rgba(255, 255, 255, 0.06);
+  --wheel-bg: #2c2c2e;
+  --wheel-bd: #444;
+  --wheel-sh: rgba(0, 0, 0, 0.5);
+  --wheel-hi: rgba(255, 255, 255, 0.05);
+  --wlbl-color: #888;
+  --center-bg: #3a3a3c;
+  --center-bd: #555;
+  --center-hi: rgba(255, 255, 255, 0.05);
+  --center-dot: #555;
+  --lcd-bg: #162030;
+  --lcd-text: #7ec8f0;
+  --lcd-dim: #5090b8;
+  --lcd-sel-bg: #0a3a6a;
+  --lcd-sel-fg: #d0eeff;
+  --lcd-auto-bg: rgba(126, 200, 240, 0.12);
+  --lcd-div: rgba(126, 200, 240, 0.15);
+  --lcd-cfg-bg: rgba(255, 255, 255, 0.06);
+  --prog-fill: #7ec8f0;
+  --brand-color: #444;
+  --wctrl-close: rgb(220, 100, 100);
+  --wctrl-min: rgb(210, 165, 55);
 }
-/* -----------------------------
+[data-theme="pk"] {
+  --body-bg: #f0d0dc;
+  --body-border: #d8a0b4;
+  --body-sh1: #c890a4;
+  --body-sh2: #b07890;
+  --body-hi: #fce8f0;
+  --wheel-bg: #e8c0cc;
+  --wheel-bd: #c8a0b4;
+  --wheel-sh: #c090a8;
+  --wheel-hi: #f8d8e4;
+  --wlbl-color: #a06070;
+  --center-bg: #e0b0c0;
+  --center-bd: #c898b0;
+  --center-hi: #f0c8d8;
+  --center-dot: #c090a0;
+  --lcd-bg: #f8e0e8;
+  --lcd-text: #8a1840;
+  --lcd-dim: #c04060;
+  --lcd-sel-bg: #a01840;
+  --lcd-sel-fg: #ffe0ec;
+  --lcd-auto-bg: rgba(138, 24, 64, 0.12);
+  --lcd-div: rgba(138, 24, 64, 0.12);
+  --lcd-cfg-bg: rgba(138, 24, 64, 0.06);
+  --prog-fill: #a01840;
+  --brand-color: #c8a0b4;
+  --wctrl-close: rgb(220, 100, 100);
+  --wctrl-min: rgb(210, 165, 55);
+}
+[data-theme="bl"] {
+  --body-bg: #c8ddf0;
+  --body-border: #90b8e0;
+  --body-sh1: #78a0cc;
+  --body-sh2: #6090bc;
+  --body-hi: #e0eef8;
+  --wheel-bg: #b8cce0;
+  --wheel-bd: #90aac8;
+  --wheel-sh: #88a0c0;
+  --wheel-hi: #d0e4f4;
+  --wlbl-color: #6088aa;
+  --center-bg: #a8c0d8;
+  --center-bd: #8aa8c8;
+  --center-hi: #c0d8ec;
+  --center-dot: #8098b8;
+  --lcd-bg: #d0e8f8;
+  --lcd-text: #0a3870;
+  --lcd-dim: #2060a0;
+  --lcd-sel-bg: #0a3878;
+  --lcd-sel-fg: #d8eeff;
+  --lcd-auto-bg: rgba(10, 56, 112, 0.12);
+  --lcd-div: rgba(10, 56, 112, 0.12);
+  --lcd-cfg-bg: rgba(10, 56, 112, 0.06);
+  --prog-fill: #0a3878;
+  --brand-color: #90b8e0;
+  --wctrl-close: rgb(220, 100, 100);
+  --wctrl-min: rgb(210, 165, 55);
+}
+[data-theme="gn"] {
+  --body-bg: #c8e8c8;
+  --body-border: #90c890;
+  --body-sh1: #78b078;
+  --body-sh2: #60a060;
+  --body-hi: #e0f4e0;
+  --wheel-bg: #b8d8b8;
+  --wheel-bd: #90c090;
+  --wheel-sh: #80b080;
+  --wheel-hi: #d0ecd0;
+  --wlbl-color: #508060;
+  --center-bg: #a8c8a8;
+  --center-bd: #88b888;
+  --center-hi: #c0dcc0;
+  --center-dot: #80a880;
+  --lcd-bg: #d0f0d0;
+  --lcd-text: #0a3810;
+  --lcd-dim: #206030;
+  --lcd-sel-bg: #0a5820;
+  --lcd-sel-fg: #d8ffe8;
+  --lcd-auto-bg: rgba(10, 56, 16, 0.12);
+  --lcd-div: rgba(10, 56, 16, 0.12);
+  --lcd-cfg-bg: rgba(10, 56, 16, 0.06);
+  --prog-fill: #0a5820;
+  --brand-color: #90c890;
+  --wctrl-close: rgb(220, 100, 100);
+  --wctrl-min: rgb(210, 165, 55);
+}
+
+/* ─────────────────────────────────────
    Reset
------------------------------ */
-* {
-  font-family: "Inter", "Noto Sans KR", sans-serif;
-}
+───────────────────────────────────── */
 *,
 *::before,
 *::after {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
-}
-button {
-  border: 0;
+  font-family: "Inter", sans-serif;
 }
 body {
+  background: transparent;
   overflow: hidden;
-  margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto;
-  color: var(--text);
-  padding: 5px;
-}
-.wrapper {
-  overflow: hidden;
-  border-radius: var(--radius-xl);
-  background: var(--bg);
-  box-shadow: 0px 0px 5px var(--primary);
-}
-/* -----------------------------
-   Window
------------------------------ */
-
-.titlebar {
   display: flex;
-  justify-content: flex-end;
   align-items: center;
-  padding: 8px 16px 8px;
-  border: 1px solid var(--bg-hover);
+  justify-content: center;
+  min-height: 100vh;
+  padding: 8px;
+}
+
+/* ─────────────────────────────────────
+   iPod 바디
+───────────────────────────────────── */
+.ipod {
+  width: 300px;
+  border-radius: var(--radius-device);
+  padding: 28px 20px 28px;
+  background: var(--body-bg);
+  border: 1.5px solid var(--body-border);
+  box-shadow:
+    2px 2px 0 var(--body-sh1),
+    4px 4px 0 var(--body-sh2),
+    0 1px 0 var(--body-hi) inset;
+}
+
+/* ─────────────────────────────────────
+   LCD 베젤
+───────────────────────────────────── */
+.bezel {
+  background: #111;
+  border-radius: 14px;
+  padding: 4px;
+  margin-bottom: 18px;
+  border: 1.5px solid #000;
+  box-shadow: inset 0 3px 8px rgba(0, 0, 0, 0.9);
+}
+.screen {
+  border-radius: 8px;
+  height: 150px;
+  overflow: hidden;
+  position: relative;
+  background: var(--lcd-bg);
+}
+/* LCD 스캔라인 */
+.screen::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 8px;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent 0,
+    transparent 3px,
+    rgba(0, 0, 0, 0.04) 3px,
+    rgba(0, 0, 0, 0.04) 4px
+  );
+  pointer-events: none;
+  z-index: 20;
+}
+
+/* ─────────────────────────────────────
+   공통 헤더 — 윈도우 컨트롤 내장
+───────────────────────────────────── */
+.scr-head {
+  display: flex;
+  align-items: center;
+  padding: 9px 12px 7px;
+  border-bottom: 1px solid var(--lcd-div);
+  gap: 7px;
+  flex-shrink: 0;
   -webkit-app-region: drag;
 }
-
-.window-controls {
+.wctrl-row {
   display: flex;
-  gap: 8px;
+  gap: 5px;
   -webkit-app-region: no-drag;
+  flex-shrink: 0;
 }
-.window-controls button {
-  position: relative;
-  width: 20px;
-  height: 20px;
-  border-radius: var(--radius-lg);
-  background: transparent;
-  color: #aaa;
-  line-height: 20px;
-  transition: background var(--transition);
-  box-shadow: var(--shadow-raised);
+.wctrl-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
   cursor: pointer;
-
-  &#close {
-    background: rgb(197, 104, 104, 0.3);
-    color: rgb(197, 104, 104);
-  }
-  &#min {
-    background: rgb(216, 173, 79, 0.3);
-    color: rgb(216, 173, 79);
-  }
-  i {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    font-size: 9px;
-    transform: translate(-50%, -50%);
-  }
+  transition:
+    filter var(--transition),
+    transform var(--transition);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    0 1px 1px rgba(0, 0, 0, 0.2);
+}
+.wctrl-dot:hover {
+  filter: brightness(1.2);
+  transform: scale(1.1);
+}
+.wctrl-dot:active {
+  transform: scale(0.92);
+}
+.wctrl-close {
+  background: var(--wctrl-close);
+}
+.wctrl-min {
+  background: var(--wctrl-min);
 }
 
-/* -----------------------------
-   Layout
------------------------------ */
-
-.header {
-  font-size: 32px;
+.scr-name {
+  font-size: 13px;
   font-weight: 600;
-  font-weight: normal;
-  line-height: 29px;
-  color: var(--bg-item);
-  letter-spacing: -0.5px;
-  text-shadow:
-    2px 2px 4px rgba(var(--shadow), 0.5),
-    -2px -2px 10px var(--primary),
-    1px 1px 10px rgba(168, 104, 197, 0.308);
-  i {
-    margin-right: 6px;
-    font-size: 16px;
-  }
+  letter-spacing: 0.2px;
+  color: var(--lcd-text);
+  flex: 1;
+  text-align: center;
 }
-.container {
-  display: grid;
-  padding: 20px;
-  grid-template-columns: 240px 1fr;
-  gap: 20px;
-}
-
-/* -----------------------------
-   Card
------------------------------ */
-.card {
-  & + .card {
-    margin-top: 24px;
-  }
-}
-
-.card h2 {
-  font-size: 15px;
-  color: var(--text);
-}
-
-.card.token .box {
-  margin-top: 20px;
-}
-
-/* -----------------------------
-   Field
------------------------------ */
-
-.field {
+.head-right {
   display: flex;
   align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.auto-badge {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.8px;
+  padding: 2px 5px;
+  border-radius: 3px;
+  background: var(--lcd-auto-bg);
+  color: var(--lcd-text);
+  transition: opacity var(--transition);
+}
+.auto-badge.off {
+  opacity: 0.3;
+}
+.batt-wrap {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+}
+.batt-body {
+  width: 20px;
+  height: 10px;
+  border-radius: 2px;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  border: 1.5px solid var(--lcd-text);
+}
+.batt-fill {
+  height: 100%;
+  width: 72%;
+  border-radius: 1px;
+  background: var(--lcd-text);
+}
+.batt-nub {
+  width: 3px;
+  height: 4px;
+  border-radius: 0 1px 1px 0;
+  background: var(--lcd-text);
+}
+
+/* ─────────────────────────────────────
+   뷰 공통
+───────────────────────────────────── */
+.view {
+  display: none;
+  flex-direction: column;
+  height: calc(100% - 37px);
   position: relative;
+  z-index: 1;
+}
+.view.show {
+  display: flex;
+}
+
+/* ─────────────────────────────────────
+   메인 메뉴 / 설정 메뉴
+───────────────────────────────────── */
+.menu-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px;
+  flex: 1;
+  justify-content: center;
+}
+.mitem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 8px;
+  border-radius: 5px;
+  font-size: 13px;
+  cursor: pointer;
+  user-select: none;
+  color: var(--lcd-text);
+  transition: background var(--transition);
+}
+.mitem.sel {
+  background: var(--lcd-sel-bg);
+  color: var(--lcd-sel-fg);
+}
+.mchev {
+  width: 6px;
+  height: 6px;
+  border-right: 1.5px solid currentColor;
+  border-top: 1.5px solid currentColor;
+  transform: rotate(45deg);
+  opacity: 0.4;
+  flex-shrink: 0;
+}
+.mitem-note {
+  font-size: 11px;
+  opacity: 0.55;
+  margin-left: auto;
+  margin-right: 8px;
+}
+
+/* ─────────────────────────────────────
+   토큰 입력 (cfg-view)
+───────────────────────────────────── */
+.cfg-scroll {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 8px 10px 8px;
+}
+.cfg-scroll::-webkit-scrollbar {
+  width: 3px;
+}
+.cfg-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.cfg-scroll::-webkit-scrollbar-thumb {
+  border-radius: 10px;
+  background: var(--lcd-text);
+  opacity: 0.3;
+}
+
+.cfg-row {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.cfg-lbl {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  color: var(--lcd-text);
+  opacity: 0.5;
+}
+.cfg-input {
+  font-size: 11px;
+  padding: 5px 8px;
+  border-radius: 5px;
+  border: none;
+  outline: none;
+  background: var(--lcd-cfg-bg);
+  color: var(--lcd-text);
   width: 100%;
-  margin-bottom: 6px;
+  letter-spacing: 0.3px;
+}
+.cfg-input::placeholder {
+  opacity: 0.35;
+  color: var(--lcd-text);
+}
+.cfg-input:focus {
+  box-shadow: 0 0 0 1.5px var(--lcd-text);
+}
+.cfg-save-btn {
+  margin-top: 4px;
+  padding: 7px;
+  border: none;
+  border-radius: 6px;
+  background: var(--lcd-sel-bg);
+  color: var(--lcd-sel-fg);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  letter-spacing: 0.5px;
+  transition: opacity var(--transition);
+  width: 100%;
+}
+.cfg-save-btn:hover {
+  opacity: 0.8;
+}
+
+/* select 스타일 */
+.cfg-select {
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23888'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  padding-right: 24px;
+}
+.cfg-select option {
+  background: var(--lcd-bg);
+  color: var(--lcd-text);
+}
+
+/* ─────────────────────────────────────
+   저장소 설정 (repo-cfg-view)
+───────────────────────────────────── */
+.repo-entry {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 7px 8px;
+  border-radius: 6px;
+  background: var(--lcd-cfg-bg);
+  position: relative;
+}
+.repo-entry-head {
+  display: flex;
+  align-items: center;
   gap: 6px;
 }
-
-.field label {
-  min-width: 80px;
-  font-size: 12px;
+.repo-entry-name {
+  font-size: 11px;
   font-weight: 600;
-}
-
-/* -----------------------------
-   Input
------------------------------ */
-
-.input {
+  color: var(--lcd-text);
   flex: 1;
-  min-width: 0;
-  padding: 7px 9px;
-  border: 1px solid var(--bg-hover);
-  border-radius: var(--radius);
-  background: var(--bg-item);
-  font-size: 12px;
-  color: var(--text);
-  transition:
-    border var(--transition),
-    box-shadow var(--transition);
-}
-
-.input:focus {
+  padding: 3px 6px;
+  border-radius: 4px;
+  border: none;
   outline: none;
-  /* border-color: var(--primary); */
-  box-shadow: 0 0 5px 1px var(--primary);
+  background: transparent;
+}
+.repo-entry-name:focus {
+  background: var(--lcd-cfg-bg);
+  box-shadow: 0 0 0 1.5px var(--lcd-text);
+}
+.repo-del-btn {
+  font-size: 13px;
+  color: var(--lcd-dim);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0 4px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.repo-branches {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding-left: 4px;
+}
+.repo-branch-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.repo-branch-input {
+  font-size: 10px;
+  padding: 3px 6px;
+  border-radius: 4px;
+  border: none;
+  outline: none;
+  background: var(--lcd-cfg-bg);
+  color: var(--lcd-text);
+  flex: 1;
+}
+.repo-branch-input:focus {
+  box-shadow: 0 0 0 1px var(--lcd-text);
+}
+.repo-branch-del {
+  font-size: 11px;
+  color: var(--lcd-dim);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0 2px;
+}
+.repo-add-branch-btn {
+  font-size: 10px;
+  color: var(--lcd-dim);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px 0;
+  text-align: left;
+  letter-spacing: 0.3px;
+}
+.repo-add-branch-btn:hover {
+  color: var(--lcd-text);
 }
 
-/* -----------------------------
-   Info Icon
------------------------------ */
-
-.info {
+/* ─────────────────────────────────────
+   테마 선택 (theme-view)
+───────────────────────────────────── */
+.theme-list {
   display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px;
+  flex: 1;
   justify-content: center;
+}
+.theme-item {
+  display: flex;
   align-items: center;
-  position: relative;
+  gap: 9px;
+  padding: 7px 8px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--lcd-text);
+  transition: background var(--transition);
+  user-select: none;
+}
+.theme-item:hover {
+  background: var(--lcd-cfg-bg);
+}
+.theme-item.sel {
+  background: var(--lcd-sel-bg);
+  color: var(--lcd-sel-fg);
+}
+.theme-swatch {
   width: 14px;
   height: 14px;
   border-radius: 50%;
-  background: var(--bg-item);
-  font-size: 10px;
-  color: var(--text);
-  cursor: help;
+  border: 1.5px solid transparent;
+  flex-shrink: 0;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+.theme-check {
+  margin-left: auto;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: transparent;
   flex-shrink: 0;
 }
-.info::before {
-  content: "i";
+.theme-item.sel .theme-check {
+  background: var(--lcd-sel-fg);
 }
 
-/* tooltip */
-.info::after {
-  opacity: 0;
-  content: attr(aria-hint);
+/* ─────────────────────────────────────
+   메시지 오버레이
+───────────────────────────────────── */
+.msg-view {
+  display: none;
   position: absolute;
-  bottom: 22px;
-  left: 50%;
-  padding: 6px 8px;
-  border-radius: 6px;
-  font-size: 11px;
-  color: var(--text-dim);
-  transform: translateX(-50%);
-  transition: opacity var(--transition);
-  white-space: nowrap;
+  inset: 37px 0 0;
+  border-radius: 0 0 8px 8px;
+  align-items: center;
+  justify-content: center;
+  background: var(--lcd-bg);
+  z-index: 5;
   pointer-events: none;
 }
-
-.info:hover::after {
-  opacity: 1;
-}
-
-/* -----------------------------
-   Buttons
------------------------------ */
-.soft-button {
-  position: relative;
-  padding: 16px 20px;
-  border: none;
-  border-radius: var(--radius-lg);
-  background: var(--bg-item);
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--text-dim);
-  text-align: center;
-  cursor: pointer;
-  letter-spacing: -0.3px;
-  text-shadow: 0 0 1px var(--text-dim);
-  &.primary {
-    color: var(--primary);
-    text-shadow: 0 0 1px var(--primary);
-    i {
-      color: var(--primary);
-      text-shadow: 0 0 1px var(--primary);
-    }
-  }
-  i {
-    margin-left: 8px;
-    font-size: 11px;
-    color: var(--text);
-    text-shadow: 0 0 1px var(--text-dim);
-  }
-
-  &.square {
-    padding: 14px;
-    aspect-ratio: 1;
-    i {
-      margin-left: 0;
-    }
-    .label {
-      display: block;
-    }
-  }
-  &::before {
-    content: "";
-    position: absolute;
-    border-radius: inherit;
-    transition: opacity 0.25s cubic-bezier(0.22, 0.61, 0.36, 1);
-    inset: 0;
-    box-shadow: var(--shadow-raised);
-  }
-  &::after {
-    opacity: 0;
-    content: "";
-    position: absolute;
-    border-radius: inherit;
-    transition: opacity 0.25s cubic-bezier(0.22, 0.61, 0.36, 1);
-    inset: 0;
-    box-shadow: var(--shadow-pressed);
-  }
-  &:hover {
-    &::before {
-      opacity: 0;
-    }
-    &:after {
-      opacity: 1;
-    }
-  }
-}
-.button-row {
+.msg-view.show {
   display: flex;
-  justify-content: space-evenly;
-  gap: 6px;
+  pointer-events: auto;
 }
 
-.toggle {
-  display: inline-block;
-  text-align: center;
-  gap: 8px;
-  cursor: pointer;
-  .label {
-    display: block;
-    margin-top: -2px;
-    font-size: 11px;
-    font-weight: 500;
-    color: var(--text-dim);
-    text-shadow: 0px 0px 1px var(--text-dim);
-  }
-  input {
-    display: none;
-  }
-  .toggle_icon {
-    display: inline-block;
-    position: relative;
-    width: 35px;
-    height: 35px;
-    border-radius: 20px;
-    background: var(--bg-item);
-    transition: background 0.25s ease;
-    box-shadow: var(--shadow-raised);
-  }
-  .toggle_icon::before {
-    opacity: 0.8;
-    content: "";
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 5px;
-    height: 5px;
-    border-radius: 50%;
-    background: var(--text);
-    transform: translate(-50%, -50%);
-    box-shadow: 0px 0px 33px var(--text);
-  }
-  input:checked ~ .label {
-    color: var(--primary);
-    text-shadow: 0px 0px 5px var(--primary);
-  }
-
-  input:checked + .toggle_icon::before {
-    background: var(--primary);
-    box-shadow: 0px 0px 4px var(--primary);
-  }
-  input:checked + .toggle_icon::after {
-    content: "";
-    position: absolute;
-    border-radius: inherit;
-    inset: 0;
-    box-shadow: 0px 0px 10px var(--primary);
-  }
-}
-
-/* -----------------------------
-   Log
------------------------------ */
-/* right */
-.right {
-  width: 320px;
-}
-.box_log {
+/* 로딩 */
+.msg-loading {
   display: flex;
   flex-direction: column;
-  position: relative;
-  min-height: 0;
-  h3 {
-    font-size: 14px;
-    font-weight: 500;
-    color: var(--text-dim);
-    text-shadow: 0px 0px 1px var(--text-dim);
-    line-height: 16px;
-    text-transform: capitalize;
-    letter-spacing: -0.5px;
-  }
-  .logclear {
-    position: absolute;
-    top: 0;
-    right: 0;
-    font-size: 12px;
-    height: 32px;
-    line-height: 32px;
-    padding: 0 16px;
-  }
-  #log {
-    overflow: auto;
-    width: 100%;
-    height: 350px;
-    margin-top: 12px;
-    padding: 16px 24px;
-    border-radius: var(--radius-lg);
-    background: var(--bg-item);
-    font-size: 11px;
-    font-family: monospace;
-    color: var(--text);
-    white-space: pre-wrap;
-    box-shadow: var(--shadow-pressed-light);
-  }
-  #log::-webkit-scrollbar {
-    width: 6px;
-  }
-  #log::-webkit-scrollbar-track {
-    background: transparent;
-  }
-  #log::-webkit-scrollbar-thumb {
-    border-radius: 20px;
-    background: var(--bg-hover);
+  align-items: center;
+  gap: 5px;
+  width: 100%;
+  padding: 0 20px;
+}
+.msg-loading.hide {
+  display: none;
+}
+
+.msg-main {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.1px;
+  color: var(--lcd-text);
+  text-align: center;
+}
+.msg-sub {
+  font-size: 11px;
+  color: var(--lcd-dim);
+  letter-spacing: 0.2px;
+  min-height: 15px;
+  text-align: center;
+}
+.msg-prog-wrap {
+  width: 68%;
+  height: 2px;
+  border-radius: 2px;
+  background: rgba(0, 0, 0, 0.1);
+  margin-top: 10px;
+  overflow: hidden;
+}
+.msg-prog-fill {
+  height: 100%;
+  width: 0%;
+  border-radius: 2px;
+  background: var(--prog-fill);
+  transition: width 0.35s ease;
+}
+
+/* 완료 결과 */
+.msg-result {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  width: 100%;
+  padding: 0 16px;
+  animation: fadeIn 0.25s ease;
+}
+.msg-result.show {
+  display: flex;
+}
+@keyframes fadeIn {
+  from {
     opacity: 0;
+    transform: translateY(3px);
   }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.result-check {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--lcd-sel-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 3px;
+}
+.check-mark {
+  width: 5px;
+  height: 8px;
+  border-right: 2px solid var(--lcd-sel-fg);
+  border-bottom: 2px solid var(--lcd-sel-fg);
+  transform: rotate(45deg) translate(-1px, -1px);
+}
+.result-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--lcd-text);
+  letter-spacing: 0.1px;
+}
+.result-stats {
+  display: flex;
+  gap: 5px;
+  margin-top: 3px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.stat-pill {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 10px;
+  letter-spacing: 0.2px;
+}
+.stat-pill.created {
+  background: var(--lcd-sel-bg);
+  color: var(--lcd-sel-fg);
+}
+.stat-pill.updated {
+  background: rgba(0, 0, 0, 0.08);
+  color: var(--lcd-text);
+}
+.stat-pill.deleted {
+  background: rgba(0, 0, 0, 0.05);
+  color: var(--lcd-dim);
+}
+.result-elapsed {
+  font-size: 10px;
+  color: var(--lcd-dim);
+  margin-top: 2px;
+  letter-spacing: 0.2px;
+}
+
+/* ─────────────────────────────────────
+   클릭 휠
+───────────────────────────────────── */
+.wheel-area {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 12px;
+}
+.wheel {
+  position: relative;
+  width: 174px;
+  height: 174px;
+  user-select: none;
+}
+.wheel-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: var(--wheel-bg);
+  border: 1.5px solid var(--wheel-bd);
+  box-shadow:
+    0 1px 0 var(--wheel-hi) inset,
+    0 -1px 0 var(--wheel-sh) inset,
+    2px 3px 6px rgba(0, 0, 0, 0.2);
+}
+.wsec {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 2;
+  transition: opacity 0.08s;
+  -webkit-app-region: no-drag;
+}
+.wsec:active {
+  opacity: 0.45;
+}
+.wsec.top {
+  top: 4px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 80px;
+  height: 48px;
+}
+.wsec.bottom {
+  bottom: 4px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 80px;
+  height: 48px;
+}
+.wsec.left {
+  left: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 48px;
+  height: 80px;
+}
+.wsec.right {
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 48px;
+  height: 80px;
+}
+.wlbl {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.8px;
+  pointer-events: none;
+  text-align: center;
+  line-height: 1.3;
+  color: var(--wlbl-color);
+}
+.center-btn {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 4;
+  transition: transform 0.08s;
+  background: var(--center-bg);
+  border: 1px solid var(--center-bd);
+  box-shadow:
+    0 1px 0 var(--center-hi) inset,
+    1px 2px 3px rgba(0, 0, 0, 0.15);
+  -webkit-app-region: no-drag;
+}
+.center-btn:active {
+  transform: translate(-50%, -50%) scale(0.93);
+}
+.center-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--center-dot);
 }

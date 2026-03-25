@@ -1,139 +1,179 @@
 <!doctype html>
-<html data-theme="light">
+<html data-theme="s">
   <head>
     <meta charset="UTF-8" />
-    <title>Jira → Notion Sync</title>
+    <title>NotionFlow</title>
     <link rel="stylesheet" href="style.css" />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Noto+Sans+KR:wght@100..900&display=swap"
-      rel="stylesheet"
-    />
-    <script
-      src="https://kit.fontawesome.com/9a24552766.js"
-      crossorigin="anonymous"
-    ></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
   </head>
-
   <body>
-    <div class="wrapper">
-      <div class="titlebar">
-        <div class="window-controls">
-          <!-- <button id="themeToggle" class="theme-toggle">
-            <i class="fa-solid fa-moon"></i>
-          </button> -->
-          <button id="min"><i class="fa-solid fa-minus"></i></button>
-          <!-- <button id="max"><i class="fa-regular fa-square"></i></button> -->
-          <button id="close"><i class="fa-solid fa-xmark"></i></button>
+    <div class="ipod" id="dev">
+
+      <!-- LCD 베젤 -->
+      <div class="bezel">
+        <div class="screen">
+
+          <!-- 윈도우 컨트롤 — LCD 헤더 안에 자연스럽게 -->
+          <div class="scr-head">
+            <div class="wctrl-row">
+              <div class="wctrl-dot wctrl-close" id="close"></div>
+              <div class="wctrl-dot wctrl-min"   id="min"></div>
+            </div>
+            <span class="scr-name" id="scr-title">NotionFlow</span>
+            <div class="head-right">
+              <span class="auto-badge" id="auto-badge">AUTO</span>
+              <div class="batt-wrap">
+                <div class="batt-body"><div class="batt-fill"></div></div>
+                <div class="batt-nub"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 메인 메뉴 뷰 -->
+          <div class="view" id="menu-view">
+            <div class="menu-list" id="mlist"></div>
+          </div>
+
+          <!-- 설정 메뉴 뷰 -->
+          <div class="view" id="set-view">
+            <div class="menu-list" id="set-mlist"></div>
+          </div>
+
+          <!-- 토큰 입력 뷰 -->
+          <div class="view" id="cfg-view">
+            <div class="cfg-scroll" id="cfg-scroll">
+              <div class="cfg-row">
+                <span class="cfg-lbl">NOTION TOKEN</span>
+                <input class="cfg-input" id="notionToken" type="password" placeholder="secret_..." />
+              </div>
+              <div class="cfg-row">
+                <span class="cfg-lbl">NOTION JIRA DB</span>
+                <input class="cfg-input" id="notionJiraDb" type="text" placeholder="data source id" />
+              </div>
+              <div class="cfg-row">
+                <span class="cfg-lbl">NOTION PR DB</span>
+                <input class="cfg-input" id="notionPrDb" type="text" placeholder="data source id" />
+              </div>
+              <div class="cfg-row">
+                <span class="cfg-lbl">NOTION REVIEW DB</span>
+                <input class="cfg-input" id="notionReviewDb" type="text" placeholder="data source id" />
+              </div>
+              <div class="cfg-row">
+                <span class="cfg-lbl">JIRA URL</span>
+                <input class="cfg-input" id="jiraUrl" type="text" placeholder="https://jira.company.com" />
+              </div>
+              <div class="cfg-row">
+                <span class="cfg-lbl">JIRA TOKEN</span>
+                <input class="cfg-input" id="jiraPat" type="password" placeholder="PAT token" />
+              </div>
+              <div class="cfg-row">
+                <span class="cfg-lbl">GITHUB URL</span>
+                <input class="cfg-input" id="githubUrl" type="text" placeholder="https://github.company.com" />
+              </div>
+              <div class="cfg-row">
+                <span class="cfg-lbl">GITHUB TOKEN</span>
+                <input class="cfg-input" id="githubToken" type="password" placeholder="ghp_..." />
+              </div>
+              <div class="cfg-row">
+                <span class="cfg-lbl">GITHUB USER</span>
+                <input class="cfg-input" id="githubUser" type="text" placeholder="username" />
+              </div>
+              <div class="cfg-row">
+                <span class="cfg-lbl">GEMINI API KEY</span>
+                <input class="cfg-input" id="geminiKey" type="password" placeholder="AIza..." />
+              </div>
+              <button class="cfg-save-btn" id="saveEnv">Save</button>
+            </div>
+          </div>
+
+          <!-- 저장소 설정 뷰 -->
+          <div class="view" id="repo-cfg-view">
+            <div class="cfg-scroll" id="repo-cfg-scroll">
+              <!-- JS로 동적 렌더 -->
+              <div id="repo-cfg-list"></div>
+              <button class="cfg-save-btn" id="addRepo" style="margin-top:6px">+ Add Repo</button>
+              <button class="cfg-save-btn" id="saveRepos" style="margin-top:4px">Save</button>
+            </div>
+          </div>
+
+          <!-- 코드 리뷰 뷰 -->
+          <div class="view" id="review-view">
+            <div class="cfg-scroll" id="review-scroll">
+              <div class="cfg-row">
+                <span class="cfg-lbl">REPOSITORY</span>
+                <select class="cfg-input cfg-select" id="reviewRepo"></select>
+              </div>
+              <div class="cfg-row">
+                <span class="cfg-lbl">BASE BRANCH</span>
+                <select class="cfg-input cfg-select" id="reviewBase"></select>
+              </div>
+              <div class="cfg-row">
+                <span class="cfg-lbl">COMPARE BRANCH</span>
+                <input class="cfg-input" id="reviewCompare" type="text" placeholder="feature/my-branch" />
+              </div>
+              <button class="cfg-save-btn" id="runReview">▶ Run Review</button>
+            </div>
+          </div>
+
+          <!-- 모드(테마) 선택 뷰 -->
+          <div class="view" id="theme-view">
+            <div class="theme-list" id="theme-list">
+              <div class="theme-item" data-theme="s">
+                <div class="theme-swatch" style="background:#e4e4e4;border-color:#c0c0c0;"></div>
+                <span>Silver</span><div class="theme-check" id="tc-s"></div>
+              </div>
+              <div class="theme-item" data-theme="bk">
+                <div class="theme-swatch" style="background:#1e1e20;border-color:#3a3a3c;"></div>
+                <span>Black</span><div class="theme-check" id="tc-bk"></div>
+              </div>
+              <div class="theme-item" data-theme="pk">
+                <div class="theme-swatch" style="background:#f0d0dc;border-color:#d8a0b4;"></div>
+                <span>Pink</span><div class="theme-check" id="tc-pk"></div>
+              </div>
+              <div class="theme-item" data-theme="bl">
+                <div class="theme-swatch" style="background:#c8ddf0;border-color:#90b8e0;"></div>
+                <span>Blue</span><div class="theme-check" id="tc-bl"></div>
+              </div>
+              <div class="theme-item" data-theme="gn">
+                <div class="theme-swatch" style="background:#c8e8c8;border-color:#90c890;"></div>
+                <span>Green</span><div class="theme-check" id="tc-gn"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 메시지 오버레이 (sync 로딩 + 결과) -->
+          <div class="msg-view" id="msg-view">
+            <div class="msg-loading" id="msg-loading">
+              <span class="msg-main" id="msg-main"></span>
+              <span class="msg-sub"  id="msg-sub"></span>
+              <div class="msg-prog-wrap">
+                <div class="msg-prog-fill" id="msg-prog-fill"></div>
+              </div>
+            </div>
+            <div class="msg-result" id="msg-result">
+              <div class="result-check"><div class="check-mark"></div></div>
+              <span class="result-title" id="result-title"></span>
+              <div class="result-stats" id="result-stats"></div>
+              <span class="result-elapsed" id="result-elapsed"></span>
+            </div>
+          </div>
+
         </div>
       </div>
-      <div class="container">
-        <!-- left -->
-        <div>
-          <!-- <div class="header">Notion<br />Flow</div> -->
-          <div class="card token">
-            <div class="box">
-              <h2><i class="fa-brands fa-notion"></i> Notion</h2>
-              <div class="field">
-                <label for="notionToken">Token</label>
-                <input class="input" id="notionToken" />
-                <span class="info" aria-hint="Notion API 접근 토큰"></span>
-              </div>
-              <div class="field">
-                <label for="notionJiraDb">Jira Data ID</label>
-                <input class="input" id="notionJiraDb" />
-                <span class="info" aria-hint="Jira 이슈 데이터베이스"></span>
-              </div>
-              <div class="field">
-                <label for="notionPrDb">PR Data ID</label>
-                <input class="input" id="notionPrDb" />
-                <span class="info" aria-hint="PR 링크 저장 DB"></span>
-              </div>
-            </div>
-            <div class="box">
-              <h2><i class="fa-brands fa-jira"></i>Jira</h2>
-              <div class="field">
-                <label for="jiraUrl">Base URL</label>
-                <input class="input" id="jiraUrl" />
-                <span
-                  class="info"
-                  aria-hint="예: https://jira.company.com"
-                ></span>
-              </div>
-              <div class="field">
-                <label for="jiraPat">Token</label>
-                <input class="input" id="jiraPat" />
-                <span class="info" aria-hint="Jira API 인증 PAT"></span>
-              </div>
-            </div>
-            <div class="box">
-              <h2><i class="fa-brands fa-github"></i>Github</h2>
-              <div class="field">
-                <label for="githubUrl">Github URL</label>
-                <input class="input" id="githubUrl" />
-                <span class="info" aria-hint="PR 검색용 API URL"></span>
-              </div>
-              <div class="field">
-                <label for="githubToken">Token</label>
-                <input class="input" id="githubToken" />
-                <span class="info" aria-hint="GitHub API Token"></span>
-              </div>
-              <div class="field">
-                <label for="githubUser">Username</label>
-                <input class="input" id="githubUser" />
-                <span class="info" aria-hint="PR author 검색"></span>
-              </div>
-            </div>
-            <button id="saveEnv" class="soft-button square primary">
-              <i class="fa-solid fa-check"></i>
-            </button>
-          </div>
-        </div>
-        <!-- right -->
-        <div class="right">
-          <div class="card box_log">
-           <h3>
-              NotionFlow<br>consle
-              <button class="soft-button square logclear" id="clearLog">
-                <i class="fa-solid fa-eraser"></i>
-              </button>
-            </h3>
-            <pre id="log">sync...</pre>
-          </div>
-          <div class="card">
-            <div class="button-row">
-              <button class="soft-button" id="syncJira">
-                Sync Jira<i class="fa-solid fa-arrows-rotate"></i>
-              </button>
-              <button class="soft-button" id="syncPR">
-                Sync PR<i class="fa-solid fa-arrows-rotate"></i>
-              </button>
-              <label class="toggle">
-                <input type="checkbox" id="autoSync" checked />
-                <span class="toggle_icon"></span>
-                <span class="label">auto</span>
-              </label>
-            </div>
-          </div>
+
+      <!-- 클릭 휠 -->
+      <div class="wheel-area">
+        <div class="wheel" id="wheel">
+          <div class="wheel-ring"></div>
+          <div class="wsec top"    id="btn-up"     ><span class="wlbl">↑</span></div>
+          <div class="wsec bottom" id="btn-down"   ><span class="wlbl">↓</span></div>
+          <div class="wsec left"   id="btn-back"   ><span class="wlbl">BACK</span></div>
+          <div class="wsec right"  id="btn-auto"   ><span class="wlbl">AUTO</span></div>
+          <div class="center-btn"  id="btn-center" ><div class="center-dot"></div></div>
         </div>
       </div>
+
     </div>
     <script src="renderer.js"></script>
-    <script>
-      const toggleBtn = document.getElementById("themeToggle");
-      if (toggleBtn) {
-        toggleBtn.addEventListener("click", () => {
-          const root = document.documentElement;
-          const theme = root.getAttribute("data-theme");
-
-          if (theme === "dark") {
-            root.setAttribute("data-theme", "light");
-            toggleBtn.innerHTML = '<i class="fa-solid fa-sun"></i>';
-          } else {
-            root.setAttribute("data-theme", "dark");
-            toggleBtn.innerHTML = '<i class="fa-solid fa-moon"></i>';
-          }
-        });
-      }
-    </script>
   </body>
 </html>

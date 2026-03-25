@@ -3,10 +3,15 @@ const { app, BrowserWindow, ipcMain } = require("electron");
 const path = require("path");
 const fs = require("fs");
 const dotenv = require("dotenv");
+
+// sync/notion보다 먼저 .env 로드
+dotenv.config({ path: path.join(__dirname, ".env") });
+
 const {
   syncJiraIssues,
   syncGitPRs,
   syncOnce,
+  syncCodeReview,
   autoSync,
   stopAutoSync,
 } = require("../sync");
@@ -19,7 +24,6 @@ function createWindow() {
     frame: false,
     titleBarStyle: "hidden",
     transparent: true,
-    titleBarStyle: "hidden",
     backgroundColor: "#00000000",
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
@@ -39,7 +43,6 @@ ipcMain.on("window-minimize", () => {
 
 ipcMain.on("window-maximize", () => {
   const win = BrowserWindow.getFocusedWindow();
-
   if (win.isMaximized()) win.unmaximize();
   else win.maximize();
 });
@@ -47,16 +50,23 @@ ipcMain.on("window-maximize", () => {
 ipcMain.on("window-close", () => {
   BrowserWindow.getFocusedWindow().close();
 });
+
 // -----------------------------
 // console.log → renderer 로그 전달
 // -----------------------------
 const originalLog = console.log;
+const originalError = console.error;
+
 console.log = (...args) => {
   originalLog(...args);
-  if (win) {
-    win.webContents.send("log", args.join(" "));
-  }
+  if (win) win.webContents.send("log", args.join(" "));
 };
+
+console.error = (...args) => {
+  originalError(...args);
+  if (win) win.webContents.send("log", "❌ " + args.join(" "));
+};
+
 // -----------------------------
 // ENV 로드
 // -----------------------------
@@ -80,15 +90,38 @@ JIRA_PAT=${data.JIRA_PAT}
 NOTION_TOKEN=${data.NOTION_TOKEN}
 NOTION_SOURCE_ID_JIRA=${data.NOTION_SOURCE_ID_JIRA}
 NOTION_SOURCE_ID_PR=${data.NOTION_SOURCE_ID_PR}
+NOTION_SOURCE_ID_REVIEW=${data.NOTION_SOURCE_ID_REVIEW}
 
 GITHUB_TOKEN=${data.GITHUB_TOKEN}
 GITHUB_USERNAME=${data.GITHUB_USERNAME}
 GITHUB_URL=${data.GITHUB_URL}
+GEMINI_API_KEY=${data.GEMINI_API_KEY}
 `.trim();
 
   fs.writeFileSync(envPath, content);
   Object.assign(process.env, data);
   console.log("✔ Config saved");
+  return true;
+});
+
+// -----------------------------
+// 저장소 설정 (repo-configs.json)
+// configs: [{ name: string, branches: string[] }]
+// -----------------------------
+const repoConfigPath = path.join(__dirname, "repo-configs.json");
+
+ipcMain.handle("load-repo-configs", async () => {
+  if (!fs.existsSync(repoConfigPath)) return [];
+  try {
+    return JSON.parse(fs.readFileSync(repoConfigPath, "utf-8"));
+  } catch {
+    return [];
+  }
+});
+
+ipcMain.handle("save-repo-configs", async (_, configs) => {
+  fs.writeFileSync(repoConfigPath, JSON.stringify(configs, null, 2));
+  console.log("✔ Repo configs saved");
   return true;
 });
 
@@ -102,6 +135,19 @@ ipcMain.handle("sync-jira", async () => {
 ipcMain.handle("sync-pr", async () => {
   await syncGitPRs();
 });
+
 ipcMain.handle("sync-once", () => syncOnce());
 ipcMain.handle("auto-sync", () => autoSync());
 ipcMain.handle("stop-auto-sync", () => stopAutoSync());
+
+// -----------------------------
+// 코드 리뷰
+// -----------------------------
+ipcMain.handle("run-code-review", async (_, owner, repo, base, compare) => {
+  try {
+    await syncCodeReview(owner, repo, base, compare);
+  } catch (err) {
+    console.error(err?.message || String(err));
+    throw err;
+  }
+});
