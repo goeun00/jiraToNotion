@@ -1,7 +1,6 @@
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
 require("dotenv").config();
 const { Client } = require("@notionhq/client");
-const { buildNotionBlocks } = require("./review");
 
 // Client를 매번 생성해서 항상 최신 토큰 사용
 const env = () => process.env;
@@ -332,116 +331,6 @@ async function updatePRPage(page, pr) {
   console.log(`~ updated PR: ${pr.title}`);
 }
 
-// -------------------- Code Review --------------------
-
-/**
- * 코드리뷰 페이지 생성
- * @param {object} opts
- * @param {string} opts.repo
- * @param {string} opts.base
- * @param {string} opts.compare
- * @param {string|null} opts.prUrl
- * @param {string} opts.summary
- * @param {{ filename: string, review: string }[]} opts.fileReviews
- */
-async function createReviewPage({
-  repo,
-  base,
-  compare,
-  prUrl,
-  summary,
-  fileReviews,
-}) {
-  const title = `[🐿️ ${repo}] ${compare} → ${base}`;
-  const now = new Date().toISOString();
-
-  // review.js의 블록 빌더로 Notion 템플릿 생성
-  const { summaryBlocks, fileBlocks } = buildNotionBlocks(
-    summary,
-    fileReviews,
-    repo,
-    base,
-    compare,
-  );
-
-  const properties = {
-    Title: { title: [{ text: { content: title } }] },
-    Repository: { select: { name: repo } },
-    Base: { rich_text: [{ text: { content: base } }] },
-    Compare: { rich_text: [{ text: { content: compare } }] },
-    ReviewedAt: { date: { start: now } },
-    Status: { status: { name: "Done" } },
-  };
-  if (prUrl) {
-    properties.PRLink = { url: prUrl };
-  }
-
-  const page = await notion.pages.create({
-    parent: {
-      type: "data_source_id",
-      data_source_id: env().NOTION_SOURCE_ID_REVIEW,
-    },
-    properties,
-    children: summaryBlocks,
-  });
-
-  // 블록 100개 제한 — 분할 append
-  const CHUNK = 90;
-  for (let i = 0; i < fileBlocks.length; i += CHUNK) {
-    await notion.blocks.children.append({
-      block_id: page.id,
-      children: fileBlocks.slice(i, i + CHUNK),
-    });
-  }
-
-  return page;
-}
-
-// -------------------- Create Review DB --------------------
-
-/**
- * 지정한 부모 페이지 안에 코드리뷰 Notion 데이터베이스를 생성하고 DB ID를 반환
- * @param {string} parentPageId - Notion 페이지 ID
- * @returns {Promise<string>} 생성된 DB ID
- */
-async function createReviewDatabase(parentPageId) {
-  const db = await notion.databases.create({
-    parent: { type: "page_id", page_id: parentPageId },
-    title: [{ type: "text", text: { content: "🔍 Code Reviews" } }],
-    icon: { type: "emoji", emoji: "🔍" },
-    properties: {
-      // 제목 (필수 — Name 키는 title 타입이어야 함)
-      Title: { title: {} },
-
-      // 저장소 선택
-      Repository: { select: {} },
-
-      // 브랜치 정보
-      Base: { rich_text: {} },
-      Compare: { rich_text: {} },
-
-      // PR 링크
-      PRLink: { url: {} },
-
-      // 리뷰 일시
-      ReviewedAt: { date: {} },
-
-      // 상태
-      Status: {
-        status: {
-          options: [
-            { name: "Done", color: "green" },
-            { name: "In Progress", color: "yellow" },
-            { name: "Failed", color: "red" },
-          ],
-        },
-      },
-    },
-  });
-
-  return db.id;
-}
-
 module.exports = {
   getAllNotionPagesMap,
   createPage,
@@ -450,6 +339,4 @@ module.exports = {
   getAllGitPRMap,
   createPRPage,
   updatePRPage,
-  createReviewPage,
-  createReviewDatabase,
 };

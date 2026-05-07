@@ -17,11 +17,14 @@ contextBridge.exposeInMainWorld("api", {
   autoSync: () => ipcRenderer.invoke("auto-sync"),
   stopAutoSync: () => ipcRenderer.invoke("stop-auto-sync"),
 
-  // 코드 리뷰
-  runCodeReview: (owner, repo, base, compare) =>
-    ipcRenderer.invoke("run-code-review", owner, repo, base, compare),
+  fetchWorklogs: (monthOffset) =>
+    ipcRenderer.invoke("fetch-worklogs", monthOffset),
 
-  // 저장소 설정 관리 (repo configs: [{ name, branches }])
-  loadRepoConfigs: () => ipcRenderer.invoke("load-repo-configs"),
-  saveRepoConfigs: (configs) => ipcRenderer.invoke("save-repo-configs", configs),
+  // 테마 설정
+  getTheme: () => ipcRenderer.invoke("get-theme"),
+  setTheme: (theme) => ipcRenderer.invoke("set-theme", theme),
+
+  // 로드워크 저장
+  exportWorkReport: (rows, month) =>
+    ipcRenderer.invoke("export-work-report", rows, month),
 });

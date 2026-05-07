@@ -11,7 +11,8 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
-    "electron": "^40.8.0"
+    "electron": "^40.8.0",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "electron-reload": "^2.0.0-alpha.1"

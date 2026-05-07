@@ -7,173 +7,174 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
   </head>
   <body>
-    <div class="ipod" id="dev">
+    <div class="ipod" id="ipod">
 
-      <!-- LCD 베젤 -->
-      <div class="bezel">
-        <div class="screen">
+      <!-- LCD 섹션 -->
+      <div class="lcd-section">
+        <div class="bezel">
+          <div class="screen">
 
-          <!-- 윈도우 컨트롤 — LCD 헤더 안에 자연스럽게 -->
-          <div class="scr-head">
-            <div class="wctrl-row">
-              <div class="wctrl-dot wctrl-close" id="close"></div>
-              <div class="wctrl-dot wctrl-min"   id="min"></div>
-            </div>
-            <span class="scr-name" id="scr-title">NotionFlow</span>
-            <div class="head-right">
-              <span class="auto-badge" id="auto-badge">AUTO</span>
-              <div class="batt-wrap">
-                <div class="batt-body"><div class="batt-fill"></div></div>
-                <div class="batt-nub"></div>
+            <!-- LCD 헤더 -->
+            <div class="scr-head">
+              <span class="scr-name" id="scr-title">NotionFlow</span>
+              <div class="head-right">
+                <span class="auto-badge" id="auto-badge">AUTO</span>
               </div>
             </div>
-          </div>
 
-          <!-- 메인 메뉴 뷰 -->
-          <div class="view" id="menu-view">
-            <div class="menu-list" id="mlist"></div>
-          </div>
+            <div class="work-panel">
+              <div class="work-panel__head">
+                <div class="month-group">
+                  <button type="button" class="month-btn" id="prevMonth">‹</button>
+                  <span class="month-label" id="workMonth">2026.05</span>
+                  <button type="button" class="month-btn" id="nextMonth">›</button>
+                </div>
 
-          <!-- 설정 메뉴 뷰 -->
-          <div class="view" id="set-view">
-            <div class="menu-list" id="set-mlist"></div>
-          </div>
+                <div class="work-actions">
+                  <span class="work-panel__percent" id="workRate">67%</span>
+                  <button type="button" class="work-export" id="exportWorkReport">↧</button>
+                  <button type="button" class="work-refresh" id="refreshWorklog">↻</button>
+                </div>
+              </div>
 
-          <!-- 토큰 입력 뷰 -->
-          <div class="view" id="cfg-view">
-            <div class="cfg-scroll" id="cfg-scroll">
-              <div class="cfg-row">
-                <span class="cfg-lbl">NOTION TOKEN</span>
-                <input class="cfg-input" id="notionToken" type="password" placeholder="secret_..." />
+              <div class="work-panel__meta">
+                <div class="work-panel__value">
+                  <strong id="loggedDays">4.7D</strong>
+                  <span id="targetDays">/ 7D</span>
+                </div>
               </div>
-              <div class="cfg-row">
-                <span class="cfg-lbl">NOTION JIRA DB</span>
-                <input class="cfg-input" id="notionJiraDb" type="text" placeholder="data source id" />
-              </div>
-              <div class="cfg-row">
-                <span class="cfg-lbl">NOTION PR DB</span>
-                <input class="cfg-input" id="notionPrDb" type="text" placeholder="data source id" />
-              </div>
-              <div class="cfg-row">
-                <span class="cfg-lbl">NOTION REVIEW DB</span>
-                <input class="cfg-input" id="notionReviewDb" type="text" placeholder="data source id" />
-              </div>
-              <div class="cfg-row">
-                <span class="cfg-lbl">JIRA URL</span>
-                <input class="cfg-input" id="jiraUrl" type="text" placeholder="https://jira.company.com" />
-              </div>
-              <div class="cfg-row">
-                <span class="cfg-lbl">JIRA TOKEN</span>
-                <input class="cfg-input" id="jiraPat" type="password" placeholder="PAT token" />
-              </div>
-              <div class="cfg-row">
-                <span class="cfg-lbl">GITHUB URL</span>
-                <input class="cfg-input" id="githubUrl" type="text" placeholder="https://github.company.com" />
-              </div>
-              <div class="cfg-row">
-                <span class="cfg-lbl">GITHUB TOKEN</span>
-                <input class="cfg-input" id="githubToken" type="password" placeholder="ghp_..." />
-              </div>
-              <div class="cfg-row">
-                <span class="cfg-lbl">GITHUB USER</span>
-                <input class="cfg-input" id="githubUser" type="text" placeholder="username" />
-              </div>
-              <div class="cfg-row">
-                <span class="cfg-lbl">GEMINI API KEY</span>
-                <input class="cfg-input" id="geminiKey" type="password" placeholder="AIza..." />
-              </div>
-              <button class="cfg-save-btn" id="saveEnv">Save</button>
-            </div>
-          </div>
 
-          <!-- 저장소 설정 뷰 -->
-          <div class="view" id="repo-cfg-view">
-            <div class="cfg-scroll" id="repo-cfg-scroll">
-              <!-- JS로 동적 렌더 -->
-              <div id="repo-cfg-list"></div>
-              <button class="cfg-save-btn" id="addRepo" style="margin-top:6px">+ Add Repo</button>
-              <button class="cfg-save-btn" id="saveRepos" style="margin-top:4px">Save</button>
-            </div>
-          </div>
-
-          <!-- 코드 리뷰 뷰 -->
-          <div class="view" id="review-view">
-            <div class="cfg-scroll" id="review-scroll">
-              <div class="cfg-row">
-                <span class="cfg-lbl">REPOSITORY</span>
-                <select class="cfg-input cfg-select" id="reviewRepo"></select>
-              </div>
-              <div class="cfg-row">
-                <span class="cfg-lbl">BASE BRANCH</span>
-                <select class="cfg-input cfg-select" id="reviewBase"></select>
-              </div>
-              <div class="cfg-row">
-                <span class="cfg-lbl">COMPARE BRANCH</span>
-                <input class="cfg-input" id="reviewCompare" type="text" placeholder="feature/my-branch" />
-              </div>
-              <button class="cfg-save-btn" id="runReview">▶ Run Review</button>
-            </div>
-          </div>
-
-          <!-- 모드(테마) 선택 뷰 -->
-          <div class="view" id="theme-view">
-            <div class="theme-list" id="theme-list">
-              <div class="theme-item" data-theme="s">
-                <div class="theme-swatch" style="background:#e4e4e4;border-color:#c0c0c0;"></div>
-                <span>Silver</span><div class="theme-check" id="tc-s"></div>
-              </div>
-              <div class="theme-item" data-theme="bk">
-                <div class="theme-swatch" style="background:#1e1e20;border-color:#3a3a3c;"></div>
-                <span>Black</span><div class="theme-check" id="tc-bk"></div>
-              </div>
-              <div class="theme-item" data-theme="pk">
-                <div class="theme-swatch" style="background:#f0d0dc;border-color:#d8a0b4;"></div>
-                <span>Pink</span><div class="theme-check" id="tc-pk"></div>
-              </div>
-              <div class="theme-item" data-theme="bl">
-                <div class="theme-swatch" style="background:#c8ddf0;border-color:#90b8e0;"></div>
-                <span>Blue</span><div class="theme-check" id="tc-bl"></div>
-              </div>
-              <div class="theme-item" data-theme="gn">
-                <div class="theme-swatch" style="background:#c8e8c8;border-color:#90c890;"></div>
-                <span>Green</span><div class="theme-check" id="tc-gn"></div>
+              <div class="work-panel__bar">
+                <div class="work-panel__bar-fill" id="workProgress" style="width: 67%"></div>
               </div>
             </div>
-          </div>
+            <!-- 메인 메뉴 뷰 -->
+            <div class="view show" id="menu-view">
+              <div class="menu-list" id="mlist"></div>
+            </div>
 
-          <!-- 메시지 오버레이 (sync 로딩 + 결과) -->
-          <div class="msg-view" id="msg-view">
-            <div class="msg-loading" id="msg-loading">
-              <span class="msg-main" id="msg-main"></span>
-              <span class="msg-sub"  id="msg-sub"></span>
-              <div class="msg-prog-wrap">
+            <!-- 메시지 오버레이 (sync 로딩 + 결과) -->
+            <div class="msg-view" id="msg-view">
+              <div class="msg-loading" id="msg-loading">
+                <span class="msg-main" id="msg-main"></span>
+                <span class="msg-sub"  id="msg-sub"></span>
+                <div class="msg-prog-wrap" id="msg-prog-wrap">
                 <div class="msg-prog-fill" id="msg-prog-fill"></div>
               </div>
+              </div>
+              <div class="msg-result" id="msg-result">
+                <div class="result-check"><div class="check-mark"></div></div>
+                <span class="result-title" id="result-title"></span>
+                <div class="result-stats" id="result-stats"></div>
+                <span class="result-elapsed" id="result-elapsed"></span>
+              </div>
             </div>
-            <div class="msg-result" id="msg-result">
-              <div class="result-check"><div class="check-mark"></div></div>
-              <span class="result-title" id="result-title"></span>
-              <div class="result-stats" id="result-stats"></div>
-              <span class="result-elapsed" id="result-elapsed"></span>
-            </div>
-          </div>
 
+          </div>
         </div>
       </div>
 
-      <!-- 클릭 휠 -->
-      <div class="wheel-area">
+      <!-- 클릭 휠 섹션 -->
+      <div class="wheel-section">
         <div class="wheel" id="wheel">
           <div class="wheel-ring"></div>
-          <div class="wsec top"    id="btn-up"     ><span class="wlbl">↑</span></div>
-          <div class="wsec bottom" id="btn-down"   ><span class="wlbl">↓</span></div>
-          <div class="wsec left"   id="btn-back"   ><span class="wlbl">BACK</span></div>
-          <div class="wsec right"  id="btn-auto"   ><span class="wlbl">AUTO</span></div>
-          <div class="center-btn"  id="btn-center" ><div class="center-dot"></div></div>
+          <div class="wsec top"    id="btn-up"><span class="wlbl">↑</span></div>
+          <div class="wsec bottom" id="btn-down"><span class="wlbl">↓</span></div>
+          <div class="wsec left"   id="btn-settings"><span class="wlbl">SET</span></div>
+          <div class="wsec right"  id="btn-auto"><span class="wlbl">AUTO</span></div>
+          <div class="center-btn"  id="btn-center"><div class="center-dot"></div></div>
         </div>
       </div>
 
     </div>
+
+    <!-- 설정 팝오버 -->
+    <div class="settings-overlay" id="settingsOverlay">
+      <div class="settings-mini">
+        <!-- 헤더 -->
+        <div class="mini-header">
+          <h1 class="mini-title">⚙️ Settings</h1>
+          <button class="mini-close" id="closeSettings">×</button>
+        </div>
+
+        <!-- 컨텐츠 -->
+        <div class="mini-content">
+          <!-- API -->
+          <div class="mini-section">
+            <div class="mini-label">🔗 Jira</div>
+            <div class="mini-field">
+              <input type="text" class="mini-input" id="jiraUrl" placeholder="domain.atlassian.net" />
+            </div>
+            <div class="mini-field">
+              <input type="password" class="mini-input" id="jiraPat" placeholder="Token" />
+            </div>
+          </div>
+
+          <div class="mini-section">
+            <div class="mini-label">📝 Notion</div>
+            <div class="mini-field">
+              <input type="password" class="mini-input" id="notionToken" placeholder="Token" />
+            </div>
+            <div class="mini-field">
+              <input type="text" class="mini-input" id="notionSourceJira" placeholder="DB (Jira)" />
+            </div>
+            <div class="mini-field">
+              <input type="text" class="mini-input" id="notionSourcePR" placeholder="DB (PR)" />
+            </div>
+          </div>
+
+          <div class="mini-section">
+            <div class="mini-label">💻 GitHub</div>
+            <div class="mini-field">
+              <input type="password" class="mini-input" id="githubToken" placeholder="Token" />
+            </div>
+            <div class="mini-field">
+              <input type="text" class="mini-input" id="githubUsername" placeholder="Username" />
+            </div>
+            <div class="mini-field">
+              <input type="text" class="mini-input" id="githubUrl" placeholder="https://github.com" />
+            </div>
+          </div>
+          <div class="mini-section">
+            <div class="mini-label">📈 Worklog</div>
+            <div class="mini-field">
+              <input
+                type="number"
+                class="mini-input"
+                id="targetLog"
+                step="0.25"
+                placeholder="Target Day"
+              />
+            </div>
+          </div>
+          <!-- Theme -->
+          <div class="mini-section">
+            <div class="mini-label">🎨 Theme</div>
+            <div class="mini-themes">
+              <div class="mini-theme theme-s active" data-theme="s"></div>
+              <div class="mini-theme theme-bk" data-theme="bk"></div>
+              <div class="mini-theme theme-pk" data-theme="pk"></div>
+              <div class="mini-theme theme-bl" data-theme="bl"></div>
+              <div class="mini-theme theme-gn" data-theme="gn"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 푸터 -->
+        <div class="mini-footer">
+          <button class="mini-btn btn-cancel" id="cancelSettings">Cancel</button>
+          <button class="mini-btn btn-save" id="saveSettings">Save</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 컨텍스트 메뉴 -->
+    <div class="context-menu" id="contextMenu">
+      <div class="context-item" id="ctx-minimize">최소화</div>
+      <div class="context-divider"></div>
+      <div class="context-item" id="ctx-close">닫기</div>
+    </div>
+
     <script src="renderer.js"></script>
   </body>
 </html>

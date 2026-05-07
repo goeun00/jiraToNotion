@@ -1,49 +1,50 @@
 /* ─────────────────────────────────────
    뷰 스택 기반 네비게이션
 ───────────────────────────────────── */
-const VIEWS = [
-  "menu-view",
-  "set-view",
-  "cfg-view",
-  "theme-view",
-  "review-view",
-  "repo-cfg-view",
-];
+const VIEWS = ["menu-view"];
 let viewStack = ["menu-view"];
 let curIdx = 0;
 let busy = false;
 let autoOn = true;
 let curTheme = "s";
 
-// 저장소 설정: [{ name: string, branches: string[] }]
-let repoConfigs = [];
+const state = {
+  logworkOffset: 0,
+  logwork: {},
+};
+
+function logworkKey(offset) {
+  return String(offset);
+}
+
+function formatDecimal(num) {
+  return Number(num || 0)
+    .toFixed(3)
+    .replace(/\.?0+$/, "");
+}
+
+function getTargetDays() {
+  return Number(document.getElementById("targetLog")?.value || 7);
+}
+
+function getLogworkData(offset = 0) {
+  return (
+    state.logwork[logworkKey(offset)] || {
+      month: "",
+      label: "",
+      totalSeconds: 0,
+      loggedDays: 0,
+      logs: [],
+      target: getTargetDays(),
+    }
+  );
+}
 
 /* 메뉴 정의 */
 const MAIN_ITEMS = [
   { label: "Sync Jira", act: "sync-jira" },
   { label: "Sync PR", act: "sync-pr" },
-  { label: "Code Review", act: "push-review" },
-  { label: "Settings", act: "push-set" },
-  { label: "About", act: "about" },
 ];
-const SET_ITEMS = [
-  { label: "Token 설정", act: "push-cfg" },
-  { label: "Repo 설정", act: "push-repo-cfg" },
-  { label: "Color Mode", act: "push-theme" },
-];
-
-const envMap = {
-  notionToken: "NOTION_TOKEN",
-  notionJiraDb: "NOTION_SOURCE_ID_JIRA",
-  notionPrDb: "NOTION_SOURCE_ID_PR",
-  notionReviewDb: "NOTION_SOURCE_ID_REVIEW",
-  jiraUrl: "JIRA_BASE_URL",
-  jiraPat: "JIRA_PAT",
-  githubUrl: "GITHUB_URL",
-  githubToken: "GITHUB_TOKEN",
-  githubUser: "GITHUB_USERNAME",
-  geminiKey: "GEMINI_API_KEY",
-};
 
 /* ─────────────────────────────────────
    뷰 전환
@@ -57,30 +58,6 @@ function applyView(id, title) {
   document.getElementById("scr-title").textContent = title || "NotionFlow";
 }
 
-function pushView(id, title) {
-  viewStack.push(id);
-  curIdx = 0;
-  applyView(id, title);
-  renderCurrentMenu();
-}
-
-function popView() {
-  if (viewStack.length <= 1) return;
-  viewStack.pop();
-  curIdx = 0;
-  const id = viewStack[viewStack.length - 1];
-  const titles = {
-    "menu-view": "NotionFlow",
-    "set-view": "Settings",
-    "cfg-view": "Token 설정",
-    "theme-view": "Color Mode",
-    "review-view": "Code Review",
-    "repo-cfg-view": "Repo 설정",
-  };
-  applyView(id, titles[id]);
-  renderCurrentMenu();
-}
-
 function currentViewId() {
   return viewStack[viewStack.length - 1];
 }
@@ -91,10 +68,6 @@ function currentViewId() {
 function renderCurrentMenu() {
   const vid = currentViewId();
   if (vid === "menu-view") renderMenu("mlist", MAIN_ITEMS);
-  else if (vid === "set-view") renderMenu("set-mlist", SET_ITEMS);
-  else if (vid === "theme-view") renderTheme();
-  else if (vid === "review-view") renderReviewView();
-  else if (vid === "repo-cfg-view") renderRepoCfgView();
 }
 
 function renderMenu(elId, items) {
@@ -108,204 +81,16 @@ function renderMenu(elId, items) {
     .join("");
 }
 
-function renderTheme() {
-  document.querySelectorAll(".theme-item").forEach((el) => {
-    const t = el.dataset.theme;
-    el.classList.toggle("sel", t === curTheme);
-  });
-}
-
-/* ─────────────────────────────────────
-   저장소 설정 뷰 렌더
-───────────────────────────────────── */
-function renderRepoCfgView() {
-  const list = document.getElementById("repo-cfg-list");
-  list.innerHTML = repoConfigs
-    .map(
-      (cfg, ri) => `
-    <div class="repo-entry" data-ri="${ri}">
-      <div class="repo-entry-head">
-        <input class="repo-entry-name cfg-input" value="${escHtml(cfg.name)}" placeholder="repo name" data-ri="${ri}" data-field="name" />
-        <button class="repo-del-btn" data-ri="${ri}" data-action="del-repo">✕</button>
-      </div>
-      <div class="repo-branches">
-        ${cfg.branches
-          .map(
-            (b, bi) => `
-          <div class="repo-branch-row">
-            <input class="repo-branch-input" value="${escHtml(b)}" placeholder="branch" data-ri="${ri}" data-bi="${bi}" />
-            <button class="repo-branch-del" data-ri="${ri}" data-bi="${bi}" data-action="del-branch">✕</button>
-          </div>
-        `,
-          )
-          .join("")}
-        <button class="repo-add-branch-btn" data-ri="${ri}" data-action="add-branch">+ branch</button>
-      </div>
-    </div>
-  `,
-    )
-    .join("");
-}
-
-function escHtml(s) {
-  return String(s)
-    .replace(/&/g, "&amp;")
-    .replace(/"/g, "&quot;")
-    .replace(/</g, "&lt;");
-}
-
-// repo-cfg 이벤트 위임
-document.getElementById("repo-cfg-list").addEventListener("input", (e) => {
-  const el = e.target;
-  const ri = parseInt(el.dataset.ri, 10);
-  const bi = el.dataset.bi !== undefined ? parseInt(el.dataset.bi, 10) : null;
-  if (isNaN(ri)) return;
-  if (el.dataset.field === "name") {
-    repoConfigs[ri].name = el.value;
-  } else if (bi !== null) {
-    repoConfigs[ri].branches[bi] = el.value;
-  }
-});
-
-document.getElementById("repo-cfg-list").addEventListener("click", (e) => {
-  const btn = e.target.closest("[data-action]");
-  if (!btn) return;
-  const action = btn.dataset.action;
-  const ri = parseInt(btn.dataset.ri, 10);
-  const bi = btn.dataset.bi !== undefined ? parseInt(btn.dataset.bi, 10) : null;
-
-  if (action === "del-repo") {
-    repoConfigs.splice(ri, 1);
-    renderRepoCfgView();
-  } else if (action === "add-branch") {
-    repoConfigs[ri].branches.push("");
-    renderRepoCfgView();
-  } else if (action === "del-branch") {
-    repoConfigs[ri].branches.splice(bi, 1);
-    renderRepoCfgView();
-  }
-});
-
-document.getElementById("addRepo").addEventListener("click", () => {
-  repoConfigs.push({ name: "", branches: ["main", "dev"] });
-  renderRepoCfgView();
-  // 스크롤 하단으로
-  const scroll = document.getElementById("repo-cfg-scroll");
-  setTimeout(() => {
-    scroll.scrollTop = scroll.scrollHeight;
-  }, 50);
-});
-
-document.getElementById("saveRepos").addEventListener("click", async () => {
-  // 빈 name 정리
-  const cleaned = repoConfigs
-    .map((cfg) => ({
-      name: cfg.name.trim(),
-      branches: cfg.branches.map((b) => b.trim()).filter(Boolean),
-    }))
-    .filter((cfg) => cfg.name);
-  repoConfigs = cleaned;
-  await window.api?.saveRepoConfigs(repoConfigs);
-  populateReviewSelects();
-  showMsgPlain("✔ 저장 완료", "repo 설정이 저장되었습니다");
-  setTimeout(() => {
-    hideMsgView();
-  }, 1400);
-});
-
-/* ─────────────────────────────────────
-   코드 리뷰 뷰 렌더
-───────────────────────────────────── */
-function renderReviewView() {
-  populateReviewSelects();
-}
-
-function populateReviewSelects() {
-  const repoSel = document.getElementById("reviewRepo");
-  const baseSel = document.getElementById("reviewBase");
-
-  // 저장소 목록
-  repoSel.innerHTML =
-    repoConfigs.length === 0
-      ? '<option value="">— 저장소 없음 (Repo 설정 필요) —</option>'
-      : repoConfigs
-          .map(
-            (cfg) =>
-              `<option value="${escHtml(cfg.name)}">${escHtml(cfg.name)}</option>`,
-          )
-          .join("");
-
-  // base 브랜치 목록 (저장소 변경 시 업데이트)
-  function updateBranches() {
-    const cfg = repoConfigs.find((c) => c.name === repoSel.value);
-    const branches = cfg ? cfg.branches : [];
-    const opts = branches
-      .map((b) => `<option value="${escHtml(b)}">${escHtml(b)}</option>`)
-      .join("");
-    baseSel.innerHTML = opts || '<option value="">— 없음 —</option>';
-  }
-
-  repoSel.addEventListener("change", updateBranches);
-  updateBranches();
-}
-
-document.getElementById("runReview").addEventListener("click", () => {
-  const repo = document.getElementById("reviewRepo").value;
-  const base = document.getElementById("reviewBase").value;
-  const compare = document.getElementById("reviewCompare").value;
-
-  if (!repo || !base || !compare) {
-    showMsgPlain("입력 오류", "저장소, base, compare 브랜치를 입력하세요");
-    setTimeout(() => hideMsgView(), 1600);
-    return;
-  }
-  if (base === compare) {
-    showMsgPlain("브랜치 오류", "base와 compare가 같습니다");
-    setTimeout(() => hideMsgView(), 1600);
-    return;
-  }
-
-  startReview(repo, base, compare);
-});
-
 /* ─────────────────────────────────────
    아이템 실행
 ───────────────────────────────────── */
 function execItem(idx) {
   if (busy) return;
   const vid = currentViewId();
-  const items =
-    vid === "menu-view" ? MAIN_ITEMS : vid === "set-view" ? SET_ITEMS : null;
+  const items = vid === "menu-view" ? MAIN_ITEMS : null;
   if (!items) return;
   const it = items[idx];
   if (!it) return;
-
-  if (it.act === "push-set") {
-    pushView("set-view", "Settings");
-    return;
-  }
-  if (it.act === "push-cfg") {
-    pushView("cfg-view", "Token 설정");
-    return;
-  }
-  if (it.act === "push-theme") {
-    pushView("theme-view", "Color Mode");
-    return;
-  }
-  if (it.act === "push-review") {
-    pushView("review-view", "Code Review");
-    return;
-  }
-  if (it.act === "push-repo-cfg") {
-    pushView("repo-cfg-view", "Repo 설정");
-    return;
-  }
-
-  if (it.act === "about") {
-    showMsgPlain("NotionFlow v1.1", "jira + github + ai review → notion");
-    setTimeout(() => hideMsgView(), 1800);
-    return;
-  }
 
   if (it.act === "sync-jira") {
     startSync("jira");
@@ -317,198 +102,116 @@ function execItem(idx) {
   }
 }
 
-/* 테마 아이템 클릭 */
-function execThemeItem(theme) {
-  curTheme = theme;
-  document.documentElement.setAttribute("data-theme", theme);
-  renderTheme();
-}
-
 /* ─────────────────────────────────────
    Sync 실행
 ───────────────────────────────────── */
 let _ctx = null;
+let _warmupIv = null;
 let _subIv = null;
-let _warmIv = null;
 
 function startSync(type) {
+  if (busy) return;
   busy = true;
-  _ctx = { total: 0, created: 0, updated: 0, deleted: 0, elapsed: null };
+  _ctx = { type, total: 0, created: 0, updated: 0, deleted: 0, elapsed: null };
 
-  const isJira = type === "jira";
-  showMsgLoading(
-    isJira ? "Jira 싱크 중..." : "PR 싱크 중...",
-    isJira ? "이슈 불러오는 중" : "pull request 조회 중",
-  );
+  showMsgLoading(type);
   startWarmup();
   startSubCycle(type);
 
-  const api = isJira ? window.api?.syncJira() : window.api?.syncPR();
-  api
-    ?.then(() => {
-      stopSubCycle();
-      finishProg();
-      showMsgResult(isJira ? "Jira 완료" : "PR 완료");
-      setTimeout(() => {
-        hideMsgView();
-        busy = false;
-      }, 2400);
-    })
-    .catch((e) => {
-      stopSubCycle();
-      stopWarmup();
-      showMsgPlain("오류 발생", e?.message || String(e));
-      setTimeout(() => {
-        hideMsgView();
-        busy = false;
-      }, 2200);
-    });
-}
-
-/* ─────────────────────────────────────
-   코드 리뷰 실행
-───────────────────────────────────── */
-function startReview(repo, base, compare) {
-  busy = true;
-  _ctx = { total: 0, created: 0, updated: 0, deleted: 0, elapsed: null };
-
-  showMsgLoading("AI 코드 리뷰 중...", `${compare} → ${base}`);
-  startWarmup();
-
-  // 서브텍스트 순환
-  const steps = ["diff 분석 중", "Gemini 리뷰 중", "Notion 페이지 생성 중"];
-  let si = 0;
-  _subIv = setInterval(() => {
-    si = Math.min(si + 1, steps.length - 1);
-    const el = document.getElementById("msg-sub");
-    if (el) el.textContent = steps[si];
-    setProg(20 + si * 25);
-  }, 4000);
-
-  const org = "org-publisher";
-
-  window.api
-    ?.runCodeReview(org, repo, base, compare)
+  const fn = type === "jira" ? window.api?.syncJira : window.api?.syncPR;
+  fn?.()
     .then(() => {
-      stopSubCycle();
-      finishProg();
-      _ctx.created = 1;
-      showMsgResult(`리뷰 완료`);
-      setTimeout(() => {
-        hideMsgView();
-        busy = false;
-      }, 2400);
-    })
-    .catch((e) => {
-      stopSubCycle();
       stopWarmup();
-      const msg = e?.message || String(e);
-      showMsgPlain("리뷰 실패", msg.slice(0, 60));
+      stopSubCycle();
+      setProg(100);
       setTimeout(() => {
-        hideMsgView();
-        busy = false;
-      }, 8000);
+        showMsgResult();
+        setTimeout(() => {
+          hideMsgView();
+          busy = false;
+          _ctx = null;
+        }, 2200);
+      }, 300);
+    })
+    .catch((err) => {
+      console.error(err);
+      stopWarmup();
+      stopSubCycle();
+      hideMsgView();
+      busy = false;
+      _ctx = null;
     });
 }
 
-/* ─────────────────────────────────────
-   msg 오버레이
-───────────────────────────────────── */
-function showMsgLoading(main, sub) {
+function showMsgLoading(type) {
+  document.getElementById("msg-view").classList.add("show");
   document.getElementById("msg-loading").classList.remove("hide");
   document.getElementById("msg-result").classList.remove("show");
-  document.getElementById("msg-main").textContent = main;
-  document.getElementById("msg-sub").textContent = sub;
-  const wrap = document.querySelector(".msg-prog-wrap");
-  if (wrap) wrap.style.visibility = "";
-  document.getElementById("msg-view").classList.add("show");
+  document.getElementById("msg-main").textContent =
+    type === "jira" ? "Sync Jira" : "Sync PR";
+  document.getElementById("msg-sub").textContent = "준비 중...";
+  setProg(0);
 }
 
-function showMsgPlain(main, sub) {
-  document.getElementById("msg-loading").classList.remove("hide");
-  document.getElementById("msg-result").classList.remove("show");
-  document.getElementById("msg-main").textContent = main;
-  document.getElementById("msg-sub").textContent = sub;
-  const pw = document.getElementById("msg-prog-fill");
-  if (pw) {
-    pw.style.transition = "none";
-    pw.style.width = "0%";
-  }
-  const wrap = document.querySelector(".msg-prog-wrap");
-  if (wrap) wrap.style.visibility = "hidden";
-  document.getElementById("msg-view").classList.add("show");
-}
-
-function showMsgResult(title) {
+function showMsgResult() {
   document.getElementById("msg-loading").classList.add("hide");
   const res = document.getElementById("msg-result");
   res.classList.add("show");
-  document.getElementById("result-title").textContent = title;
-  const c = _ctx?.created || 0,
-    u = _ctx?.updated || 0,
-    d = _ctx?.deleted || 0;
-  document.getElementById("result-stats").innerHTML = [
-    c > 0 ? `<span class="stat-pill created">+${c} new</span>` : "",
-    u > 0 ? `<span class="stat-pill updated">~${u} updated</span>` : "",
-    d > 0 ? `<span class="stat-pill deleted">-${d} deleted</span>` : "",
-    c === 0 && u === 0 && d === 0
-      ? `<span class="stat-pill updated">변경 없음</span>`
-      : "",
-  ].join("");
-  document.getElementById("result-elapsed").textContent = _ctx?.elapsed
-    ? `${_ctx.elapsed}s`
-    : "";
+  document.getElementById("result-title").textContent = "완료";
+  const stats = document.getElementById("result-stats");
+  stats.innerHTML = "";
+  if (_ctx.created > 0) {
+    stats.innerHTML += `<span class="stat-pill created">+${_ctx.created}</span>`;
+  }
+  if (_ctx.updated > 0) {
+    stats.innerHTML += `<span class="stat-pill updated">~${_ctx.updated}</span>`;
+  }
+  if (_ctx.deleted > 0) {
+    stats.innerHTML += `<span class="stat-pill deleted">-${_ctx.deleted}</span>`;
+  }
+  if (_ctx.elapsed) {
+    document.getElementById("result-elapsed").textContent = `${_ctx.elapsed}s`;
+  }
 }
 
 function hideMsgView() {
   document.getElementById("msg-view").classList.remove("show");
-  document.getElementById("msg-result").classList.remove("show");
-  document.getElementById("msg-loading").classList.remove("hide");
-  const wrap = document.querySelector(".msg-prog-wrap");
-  if (wrap) wrap.style.visibility = "";
-  setProg(0, false);
-  _ctx = null;
 }
 
-/* ─────────────────────────────────────
-   프로그레스바
-───────────────────────────────────── */
-function setProg(pct, animate) {
-  const f = document.getElementById("msg-prog-fill");
-  if (!f) return;
-  f.style.transition = animate === false ? "none" : "width .35s ease";
-  f.style.width = Math.min(100, Math.max(0, Math.round(pct))) + "%";
+function showMsgPlain(title, sub) {
+  document.getElementById("msg-view").classList.add("show");
+  document.getElementById("msg-loading").classList.remove("hide");
+  document.getElementById("msg-result").classList.remove("show");
+  document.getElementById("msg-main").textContent = title;
+  document.getElementById("msg-sub").textContent = sub;
+  document.getElementById("msg-prog-wrap").style.display = "none";
 }
+
+function setProg(val) {
+  document.getElementById("msg-prog-fill").style.width = val + "%";
+}
+
+function bumpProg() {
+  if (!_ctx || _ctx.total === 0) return;
+  const done = _ctx.created + _ctx.updated + _ctx.deleted;
+  const pct = Math.min(95, 50 + Math.floor((done / _ctx.total) * 45));
+  setProg(pct);
+}
+
 function startWarmup() {
-  setProg(0, false);
   let p = 0;
-  _warmIv = setInterval(() => {
-    p += 1.2;
-    if (p >= 15) {
-      clearInterval(_warmIv);
-      _warmIv = null;
-      return;
+  _warmupIv = setInterval(() => {
+    if (p < 25) {
+      p += 1;
+      setProg(p);
     }
-    setProg(p);
   }, 80);
 }
 function stopWarmup() {
-  if (_warmIv) {
-    clearInterval(_warmIv);
-    _warmIv = null;
+  if (_warmupIv) {
+    clearInterval(_warmupIv);
+    _warmupIv = null;
   }
-}
-function finishProg() {
-  stopWarmup();
-  setProg(100);
-}
-function bumpProg() {
-  if (!_ctx || _ctx.total <= 0) return;
-  const ratio = Math.min(
-    1,
-    (_ctx.created + _ctx.updated + _ctx.deleted) / _ctx.total,
-  );
-  setProg(50 + ratio * 45);
 }
 
 /* ─────────────────────────────────────
@@ -583,6 +286,155 @@ function parseLog(msg) {
 window.api?.onLog((msg) => parseLog(msg));
 
 /* ─────────────────────────────────────
+   Worklog 패널
+───────────────────────────────────── */
+async function fetchLogwork() {
+  const refreshBtn = document.getElementById("refreshWorklog");
+  const panel = document.querySelector(".work-panel");
+
+  refreshBtn?.classList.add("is-spin");
+  panel?.classList.add("is-refreshing");
+
+  try {
+    const data = await window.api?.fetchWorklogs(state.logworkOffset);
+    if (!data) return;
+
+    state.logwork[logworkKey(state.logworkOffset)] = {
+      ...data,
+      target: getTargetDays(),
+    };
+
+    renderLogwork();
+  } catch (err) {
+    console.warn(err);
+    showMsgPlain("Worklog", "불러오기에 실패했어요");
+    setTimeout(hideMsgView, 1400);
+  } finally {
+    refreshBtn?.classList.remove("is-spin");
+    panel?.classList.remove("is-refreshing");
+  }
+}
+
+function renderLogwork() {
+  const data = getLogworkData(state.logworkOffset);
+  const target = Number(data.target || 7);
+  const logged = Number(data.loggedDays || 0);
+  const rate =
+    target > 0 ? Math.min(100, Math.round((logged / target) * 100)) : 0;
+
+  document.getElementById("workMonth").textContent =
+    data.label || (data.month ? data.month.replace("-", ".") : "-");
+  document.getElementById("loggedDays").textContent =
+    `${formatDecimal(logged)}D`;
+  document.getElementById("targetDays").textContent =
+    `/ ${formatDecimal(target)}D`;
+  document.getElementById("workRate").textContent = `${rate}%`;
+  document.getElementById("workProgress").style.width = `${rate}%`;
+}
+
+function getWorkCategory(components = []) {
+  const names = components.map((c) => c.name || "").join(" ");
+  const hasG = /GMARKET|G마켓|G\b/i.test(names);
+  const hasI = /AUCTION|옥션|IAC|I\b/i.test(names);
+
+  if (hasG && hasI) return "G/I";
+  if (hasG) return "G";
+  if (hasI) return "I";
+  return "";
+}
+
+function buildWorkReportRows() {
+  const { logs = [] } = getLogworkData(state.logworkOffset);
+  const group = new Map();
+
+  logs.forEach((log) => {
+    const key = log.issueKey;
+    if (!key) return;
+
+    if (!group.has(key)) {
+      group.set(key, { issueKey: key, logs: [], seconds: 0 });
+    }
+
+    const item = group.get(key);
+    item.logs.push(log);
+    item.seconds += Number(log.timeSpentSeconds || 0);
+  });
+
+  return [...group.values()]
+    .sort((a, b) => {
+      const aLast = new Date(a.logs[0]?.started || 0).getTime();
+      const bLast = new Date(b.logs[0]?.started || 0).getTime();
+      return bLast - aLast;
+    })
+    .map(({ issueKey, logs, seconds }) => {
+      const sorted = logs
+        .slice()
+        .sort((a, b) => new Date(a.started) - new Date(b.started));
+
+      const firstLog = sorted[0] || {};
+
+      return {
+        "JIRA 번호": issueKey,
+        업무내용: firstLog.summary || "",
+        업무분류: getWorkCategory(firstLog.components),
+        Type:
+          firstLog.issueType || (/^(GPP|BCI)-/i.test(issueKey) ? "BC" : "DR"),
+        요청구분: "JIRA",
+        요청자: (firstLog.reporter || "")
+          .replace(/\s*\([^)]*\)\s*$/, "")
+          .trim(),
+        담당자: (firstLog.assignee || "")
+          .replace(/\s*\([^)]*\)\s*$/, "")
+          .trim(),
+        "업무 시작일": firstLog.targetStart || "",
+        "업무 종료일": firstLog.targetEnd || "",
+        "Mark up Delivery": firstLog.expectedDeliveryDate || "",
+        "소요시간(D)": formatDecimal(seconds / 28800),
+        Phase: firstLog.statusCategory || "",
+        LTS: "",
+        비고: firstLog.url || "",
+      };
+    });
+}
+
+window.buildWorkReportRows = buildWorkReportRows;
+
+//
+document
+  .getElementById("exportWorkReport")
+  ?.addEventListener("click", async () => {
+    const btn = document.getElementById("exportWorkReport");
+
+    try {
+      btn?.classList.add("is-exporting");
+
+      const rows = buildWorkReportRows();
+      const { month } = getLogworkData(state.logworkOffset);
+
+      if (!rows.length) {
+        showMsgPlain("Excel Export", "내보낼 로그워크가 없어요");
+        setTimeout(hideMsgView, 1600);
+        return;
+      }
+
+      const result = await window.api.exportWorkReport(rows, month);
+
+      if (!result?.canceled) {
+        showMsgPlain("Excel Export", "엑셀 열었어요!");
+        setTimeout(hideMsgView, 1600);
+      }
+    } catch (err) {
+      console.warn(err);
+
+      showMsgPlain("Excel Export", err?.message || "내보내기에 실패했어요");
+
+      setTimeout(hideMsgView, 2200);
+    } finally {
+      btn?.classList.remove("is-exporting");
+    }
+  });
+
+/* ─────────────────────────────────────
    AUTO badge
 ───────────────────────────────────── */
 function updateAutoBadge() {
@@ -594,49 +446,13 @@ function updateAutoBadge() {
 ───────────────────────────────────── */
 function nav(dir) {
   if (busy) return;
-  const vid = currentViewId();
-
-  if (dir === "back") {
-    popView();
-    return;
-  }
-
   if (dir === "auto") {
     autoOn = !autoOn;
     updateAutoBadge();
     autoOn ? window.api?.autoSync() : window.api?.stopAutoSync();
     return;
   }
-
-  if (vid === "cfg-view") {
-    document.getElementById("cfg-scroll").scrollTop +=
-      dir === "down" ? 44 : -44;
-    return;
-  }
-  if (vid === "repo-cfg-view") {
-    document.getElementById("repo-cfg-scroll").scrollTop +=
-      dir === "down" ? 44 : -44;
-    return;
-  }
-  if (vid === "review-view") {
-    document.getElementById("review-scroll").scrollTop +=
-      dir === "down" ? 44 : -44;
-    return;
-  }
-  if (vid === "theme-view") {
-    const themes = ["s", "bk", "pk", "bl", "gn"];
-    const ci = themes.indexOf(curTheme);
-    const ni =
-      dir === "down"
-        ? Math.min(ci + 1, themes.length - 1)
-        : Math.max(ci - 1, 0);
-    execThemeItem(themes[ni]);
-    return;
-  }
-
-  const items =
-    vid === "menu-view" ? MAIN_ITEMS : vid === "set-view" ? SET_ITEMS : null;
-  if (!items) return;
+  const items = MAIN_ITEMS;
   if (dir === "up") {
     curIdx = (curIdx - 1 + items.length) % items.length;
     renderCurrentMenu();
@@ -646,141 +462,175 @@ function nav(dir) {
     renderCurrentMenu();
   }
 }
-
 function doSelect() {
   if (busy) return;
-  const vid = currentViewId();
-  if (vid === "cfg-view") {
-    saveEnv();
-    return;
-  }
-  if (vid === "theme-view") {
-    /* 클릭으로 적용 */ return;
-  }
-  if (vid === "review-view") {
-    document.getElementById("runReview").click();
-    return;
-  }
-  if (vid === "repo-cfg-view") {
-    document.getElementById("saveRepos").click();
-    return;
-  }
   execItem(curIdx);
 }
 
 /* ─────────────────────────────────────
-   휠 드래그
+   컨텍스트 메뉴
 ───────────────────────────────────── */
-(function () {
-  const w = document.getElementById("wheel");
-  let startA = null;
-  const angle = (e) => {
-    const r = w.getBoundingClientRect(),
-      t = e.touches ? e.touches[0] : e;
-    return (
-      Math.atan2(
-        t.clientY - (r.top + r.height / 2),
-        t.clientX - (r.left + r.width / 2),
-      ) *
-      (180 / Math.PI)
-    );
-  };
-  const onStart = (e) => {
-    if (!e.target.closest(".wsec,.center-btn")) {
-      startA = angle(e);
-      e.preventDefault();
-    }
-  };
-  const onMove = (e) => {
-    if (startA === null) return;
-    e.preventDefault();
-    const a = angle(e);
-    let d = a - startA;
-    if (d > 180) d -= 360;
-    if (d < -180) d += 360;
-    if (Math.abs(d) > 22) {
-      nav(d > 0 ? "down" : "up");
-      startA = a;
-    }
-  };
-  const onEnd = () => {
-    startA = null;
-  };
-  w.addEventListener("mousedown", onStart);
-  w.addEventListener("mousemove", onMove);
-  w.addEventListener("mouseup", onEnd);
-  w.addEventListener("touchstart", onStart, { passive: false });
-  w.addEventListener("touchmove", onMove, { passive: false });
-  w.addEventListener("touchend", onEnd);
-})();
+const ipod = document.getElementById("ipod");
+const contextMenu = document.getElementById("contextMenu");
 
-/* ─────────────────────────────────────
-   클릭 이벤트
-───────────────────────────────────── */
-document.getElementById("mlist").addEventListener("click", (e) => {
-  const item = e.target.closest(".mitem");
-  if (!item) return;
-  const idx = parseInt(item.dataset.idx, 10);
-  curIdx = idx;
-  renderCurrentMenu();
-  execItem(idx);
-});
-document.getElementById("set-mlist").addEventListener("click", (e) => {
-  const item = e.target.closest(".mitem");
-  if (!item) return;
-  const idx = parseInt(item.dataset.idx, 10);
-  curIdx = idx;
-  renderCurrentMenu();
-  execItem(idx);
-});
-document.getElementById("theme-list").addEventListener("click", (e) => {
-  const item = e.target.closest(".theme-item");
-  if (!item) return;
-  execThemeItem(item.dataset.theme);
-});
-
+// 휠 버튼 클릭 이벤트
 document.getElementById("btn-up").addEventListener("click", () => nav("up"));
 document
   .getElementById("btn-down")
   .addEventListener("click", () => nav("down"));
-document
-  .getElementById("btn-back")
-  .addEventListener("click", () => nav("back"));
+document.getElementById("btn-settings").addEventListener("click", () => {
+  openSettings();
+});
 document
   .getElementById("btn-auto")
   .addEventListener("click", () => nav("auto"));
 document
   .getElementById("btn-center")
   .addEventListener("click", () => doSelect());
-document
-  .getElementById("min")
-  .addEventListener("click", () => window.api?.minimize());
-document
-  .getElementById("close")
-  .addEventListener("click", () => window.api?.close());
+
+// 우클릭 메뉴
+
+ipod.addEventListener("contextmenu", (e) => {
+  e.preventDefault();
+  contextMenu.style.left = e.clientX + "px";
+  contextMenu.style.top = e.clientY + "px";
+  contextMenu.classList.add("show");
+});
+
+document.addEventListener("click", () => {
+  contextMenu.classList.remove("show");
+});
+
+document.getElementById("ctx-minimize").addEventListener("click", () => {
+  window.api?.minimize();
+});
+
+document.getElementById("ctx-close").addEventListener("click", () => {
+  window.api?.close();
+});
 
 /* ─────────────────────────────────────
-   ENV 저장 / 로드
+   설정 팝오버
 ───────────────────────────────────── */
-async function saveEnv() {
-  const data = {};
-  Object.entries(envMap).forEach(([id, key]) => {
-    const el = document.getElementById(id);
-    data[key] = el?.value || "";
-  });
-  await window.api?.saveEnv(data);
-  popView();
-}
-document.getElementById("saveEnv").addEventListener("click", saveEnv);
+const settingsOverlay = document.getElementById("settingsOverlay");
+const closeSettingsBtn = document.getElementById("closeSettings");
+const cancelSettingsBtn = document.getElementById("cancelSettings");
+const saveSettingsBtn = document.getElementById("saveSettings");
 
-async function loadEnv() {
+// 설정 열기
+function openSettings() {
+  loadSettingsData();
+  settingsOverlay.classList.add("show");
+}
+
+// 설정 닫기
+function closeSettingsPopover() {
+  settingsOverlay.classList.remove("show");
+}
+
+// 설정 로드
+async function loadSettingsData() {
   const env = await window.api?.loadEnv();
   if (!env) return;
-  Object.entries(envMap).forEach(([id, key]) => {
-    const el = document.getElementById(id);
-    if (el && env[key]) el.value = env[key];
-  });
+
+  document.getElementById("jiraUrl").value = env.JIRA_BASE_URL || "";
+  document.getElementById("jiraPat").value = env.JIRA_PAT || "";
+  document.getElementById("notionToken").value = env.NOTION_TOKEN || "";
+  document.getElementById("notionSourceJira").value =
+    env.NOTION_SOURCE_ID_JIRA || "";
+  document.getElementById("notionSourcePR").value =
+    env.NOTION_SOURCE_ID_PR || "";
+  document.getElementById("githubToken").value = env.GITHUB_TOKEN || "";
+  document.getElementById("githubUsername").value = env.GITHUB_USERNAME || "";
+  document.getElementById("githubUrl").value = env.GITHUB_URL || "";
+  document.getElementById("targetLog").value = env.WORKLOG_TARGET_DAYS || "7";
+
+  // 현재 테마 로드
+  const theme = await window.api?.getTheme();
+  if (theme) {
+    document
+      .querySelectorAll(".mini-theme")
+      .forEach((i) => i.classList.remove("active"));
+    document
+      .querySelector(`.mini-theme[data-theme="${theme}"]`)
+      ?.classList.add("active");
+  }
 }
+
+// 설정 저장
+async function saveSettingsData() {
+  const data = {
+    JIRA_BASE_URL: document.getElementById("jiraUrl").value,
+    JIRA_PAT: document.getElementById("jiraPat").value,
+    NOTION_TOKEN: document.getElementById("notionToken").value,
+    NOTION_SOURCE_ID_JIRA: document.getElementById("notionSourceJira").value,
+    NOTION_SOURCE_ID_PR: document.getElementById("notionSourcePR").value,
+    NOTION_SOURCE_ID_REVIEW: "",
+    GITHUB_TOKEN: document.getElementById("githubToken").value,
+    GITHUB_USERNAME: document.getElementById("githubUsername").value,
+    GITHUB_URL: document.getElementById("githubUrl").value,
+    WORKLOG_TARGET_DAYS: document.getElementById("targetLog").value || "7",
+  };
+
+  await window.api?.saveEnv(data);
+
+  const selectedTheme =
+    document.querySelector(".mini-theme.active")?.dataset.theme;
+  if (selectedTheme) {
+    await window.api?.setTheme(selectedTheme);
+  }
+
+  const cur = state.logwork[logworkKey(state.logworkOffset)];
+  if (cur) {
+    cur.target = getTargetDays();
+    renderLogwork();
+  }
+
+  closeSettingsPopover();
+}
+
+// 이벤트 리스너
+closeSettingsBtn.addEventListener("click", closeSettingsPopover);
+cancelSettingsBtn.addEventListener("click", closeSettingsPopover);
+saveSettingsBtn.addEventListener("click", saveSettingsData);
+
+// 오버레이 클릭시 닫기
+settingsOverlay.addEventListener("click", (e) => {
+  if (e.target === settingsOverlay) {
+    closeSettingsPopover();
+  }
+});
+
+// 테마 선택
+document.querySelectorAll(".mini-theme").forEach((item) => {
+  item.addEventListener("click", () => {
+    document
+      .querySelectorAll(".mini-theme")
+      .forEach((i) => i.classList.remove("active"));
+    item.classList.add("active");
+  });
+});
+
+document.getElementById("refreshWorklog")?.addEventListener("click", () => {
+  fetchLogwork();
+});
+
+document.getElementById("prevMonth")?.addEventListener("click", () => {
+  state.logworkOffset -= 1;
+  fetchLogwork();
+});
+
+document.getElementById("nextMonth")?.addEventListener("click", () => {
+  state.logworkOffset += 1;
+  fetchLogwork();
+});
+
+// ESC로 닫기
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && settingsOverlay.classList.contains("show")) {
+    closeSettingsPopover();
+  }
+});
 
 /* ─────────────────────────────────────
    초기화
@@ -790,10 +640,8 @@ window.addEventListener("DOMContentLoaded", async () => {
   document.getElementById("menu-view").classList.add("show");
   renderCurrentMenu();
   updateAutoBadge();
-  await loadEnv();
-
-  // 저장소 설정 로드
-  repoConfigs = (await window.api?.loadRepoConfigs()) || [];
+  await loadSettingsData();
+  await fetchLogwork();
 
   if (autoOn) window.api?.autoSync();
 });
