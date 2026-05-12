@@ -6,6 +6,11 @@ const {
   globalShortcut,
   shell,
 } = require("electron");
+
+app.disableHardwareAcceleration();
+app.commandLine.appendSwitch("disable-gpu");
+app.commandLine.appendSwitch("disable-software-rasterizer");
+
 const path = require("path");
 const fs = require("fs");
 const XLSX = require("xlsx");
@@ -33,6 +38,8 @@ function createWindow() {
     titleBarStyle: "hidden",
     transparent: true,
     backgroundColor: "#00000000",
+    hasShadow: false,
+    roundedCorners: false,
     resizable: false,
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
@@ -129,10 +136,15 @@ WORKLOG_TARGET_DAYS=${data.WORKLOG_TARGET_DAYS || "7"}
 NOTION_TOKEN=${data.NOTION_TOKEN}
 NOTION_SOURCE_ID_JIRA=${data.NOTION_SOURCE_ID_JIRA}
 NOTION_SOURCE_ID_PR=${data.NOTION_SOURCE_ID_PR}
+NOTION_SOURCE_ID_REVIEW=${data.NOTION_SOURCE_ID_REVIEW}
 
 GITHUB_TOKEN=${data.GITHUB_TOKEN}
 GITHUB_USERNAME=${data.GITHUB_USERNAME}
 GITHUB_URL=${data.GITHUB_URL}
+
+LOCK_BG_POS_X=${data.LOCK_BG_POS_X ?? 0}
+LOCK_BG_POS_Y=${data.LOCK_BG_POS_Y ?? 0}
+LOCK_BG_ZOOM=${data.LOCK_BG_ZOOM ?? 1}
 `.trim();
 
   fs.writeFileSync(envPath, content);
@@ -214,6 +226,25 @@ ipcMain.handle("export-work-report", async (_, rows = [], month = "") => {
     filePath,
   };
 });
+// -----------------------------
+// 잠금 배경 이미지 저장
+// -----------------------------
+const lockBgStorePath = path.join(__dirname, "lock-bg-store.json");
+
+ipcMain.handle("load-lock-bg", async () => {
+  if (!fs.existsSync(lockBgStorePath)) return { url: "" };
+  try {
+    return JSON.parse(fs.readFileSync(lockBgStorePath, "utf-8"));
+  } catch {
+    return { url: "" };
+  }
+});
+
+ipcMain.handle("save-lock-bg", async (_, data) => {
+  fs.writeFileSync(lockBgStorePath, JSON.stringify(data, null, 2));
+  return true;
+});
+
 // -----------------------------
 // 테마 설정
 // -----------------------------

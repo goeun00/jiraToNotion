@@ -8,6 +8,14 @@ let busy = false;
 let autoOn = true;
 let curTheme = "s";
 
+// 잠금 화면 상태
+let isLocked = false;
+let lockClockInterval = null;
+let lockBgImageUrl = "";
+let lockBgPanX = 0;
+let lockBgPanY = 0;
+let lockBgZoom = 1;
+
 const state = {
   logworkOffset: 0,
   logwork: {},
@@ -546,15 +554,18 @@ function nav(dir) {
   if (dir === "auto") {
     autoOn = !autoOn;
     updateAutoBadge();
+
     autoOn ? window.api?.autoSync() : window.api?.stopAutoSync();
     return;
   }
 
   const items = MAIN_ITEMS;
+
   if (dir === "up") {
     curIdx = (curIdx - 1 + items.length) % items.length;
     renderCurrentMenu();
   }
+
   if (dir === "down") {
     curIdx = (curIdx + 1) % items.length;
     renderCurrentMenu();
@@ -638,6 +649,7 @@ async function loadSettingsData() {
 
   document.getElementById("jiraUrl").value = env.JIRA_BASE_URL || "";
   document.getElementById("jiraPat").value = env.JIRA_PAT || "";
+  document.getElementById("jiraEmail").value = env.JIRA_EMAIL || "";
   document.getElementById("notionToken").value = env.NOTION_TOKEN || "";
   document.getElementById("notionSourceJira").value =
     env.NOTION_SOURCE_ID_JIRA || "";
@@ -648,20 +660,23 @@ async function loadSettingsData() {
   document.getElementById("githubUrl").value = env.GITHUB_URL || "";
   document.getElementById("targetLog").value = env.WORKLOG_TARGET_DAYS || "7";
 
-  // 현재 테마 로드
-  const theme = await window.api?.getTheme();
+  // 잠금 설정 로드
+  const lockBgData = await window.api?.loadLockBg?.();
+  lockBgImageUrl = lockBgData?.url || '';
+  lockBgPanX = Number(env.LOCK_BG_POS_X ?? 0);
+  lockBgPanY = Number(env.LOCK_BG_POS_Y ?? 0);
+  lockBgZoom = Number(env.LOCK_BG_ZOOM ?? 1) || 1;
 
-  if (theme) {
-    curTheme = theme;
+  const zoomSlider = document.getElementById('lockZoomSlider');
+  const zoomVal = document.getElementById('lockZoomVal');
+  if (zoomSlider) zoomSlider.value = lockBgZoom;
+  if (zoomVal) zoomVal.textContent = `${lockBgZoom.toFixed(1)}×`;
 
-    document
-      .querySelectorAll(".mini-theme")
-      .forEach((i) => i.classList.remove("active"));
+  updateImagePreview(lockBgImageUrl);
 
-    document
-      .querySelector(`.mini-theme[data-theme="${theme}"]`)
-      ?.classList.add("active");
-  }
+  // 현재 테마 — 이미 curTheme으로 UI가 반영되어 있으므로 active class만 동기화
+  document.querySelectorAll(".mini-theme").forEach((i) => i.classList.remove("active"));
+  document.querySelector(`.mini-theme[data-theme="${curTheme}"]`)?.classList.add("active");
 }
 
 // 설정 저장
@@ -669,6 +684,7 @@ async function saveSettingsData() {
   const data = {
     JIRA_BASE_URL: document.getElementById("jiraUrl").value,
     JIRA_PAT: document.getElementById("jiraPat").value,
+    JIRA_EMAIL: document.getElementById("jiraEmail").value,
     NOTION_TOKEN: document.getElementById("notionToken").value,
     NOTION_SOURCE_ID_JIRA: document.getElementById("notionSourceJira").value,
     NOTION_SOURCE_ID_PR: document.getElementById("notionSourcePR").value,
@@ -676,6 +692,9 @@ async function saveSettingsData() {
     GITHUB_USERNAME: document.getElementById("githubUsername").value,
     GITHUB_URL: document.getElementById("githubUrl").value,
     WORKLOG_TARGET_DAYS: document.getElementById("targetLog").value || "7",
+    LOCK_BG_POS_X: lockBgPanX,
+    LOCK_BG_POS_Y: lockBgPanY,
+    LOCK_BG_ZOOM: lockBgZoom,
   };
 
   const nextTarget = Number(data.WORKLOG_TARGET_DAYS || 7);
@@ -687,7 +706,8 @@ async function saveSettingsData() {
     try {
       await Promise.all([
         window.api?.saveEnv(data),
-        nextTheme ? window.api?.saveTheme?.(nextTheme) : Promise.resolve(),
+        nextTheme ? window.api?.setTheme?.(nextTheme) : Promise.resolve(),
+        window.api?.saveLockBg?.({ url: lockBgImageUrl }),
       ]);
 
       const cur = state.logwork[logworkKey(state.logworkOffset)];
@@ -769,3 +789,215 @@ window.addEventListener("DOMContentLoaded", async () => {
 
   if (autoOn) window.api?.autoSync();
 });
+
+// ===== 잠금 화면 기능 =====
+function updateLockClock() {
+  const now = new Date();
+  
+  const hours = String(now.getHours()).padStart(2, '0');
+  const minutes = String(now.getMinutes()).padStart(2, '0');
+  const timeEl = document.getElementById("lock-time");
+  if (timeEl) {
+    timeEl.textContent = `${hours}:${minutes}`;
+  }
+  
+  const days = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+  const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+  const dayName = days[now.getDay()];
+  const monthName = months[now.getMonth()];
+  const date = now.getDate();
+  
+  const dateEl = document.getElementById("lock-date");
+  if (dateEl) {
+    dateEl.textContent = `${dayName}, ${monthName} ${date}`;
+  }
+}
+
+function showLockScreen() {
+  isLocked = true;
+  updateLockClock();
+  lockClockInterval = setInterval(updateLockClock, 1000);
+  
+  document.getElementById("lock-led-icon")?.classList.add("locked");
+  
+  const lockScreen = document.getElementById("lock-screen");
+  const lockBgImg = document.getElementById("lock-bg-img");
+  if (lockScreen) {
+    if (lockBgImageUrl && lockBgImg) {
+      lockScreen.setAttribute("data-bg", "image");
+      lockBgImg.src = lockBgImageUrl;
+      lockBgImg.style.transform = `translate(${lockBgPanX}%, ${lockBgPanY}%) scale(${lockBgZoom})`;
+    } else {
+      lockScreen.setAttribute("data-bg", "theme");
+      if (lockBgImg) lockBgImg.src = "";
+    }
+    lockScreen.classList.add("show");
+  }
+}
+
+function hideLockScreen() {
+  isLocked = false;
+  
+  if (lockClockInterval) {
+    clearInterval(lockClockInterval);
+    lockClockInterval = null;
+  }
+  
+  document.getElementById("lock-led-icon")?.classList.remove("locked");
+  document.getElementById("lock-screen")?.classList.remove("show");
+}
+
+function updateImagePreview(url) {
+  const placeholder = document.getElementById('lockPreviewPlaceholder');
+  const previewImg = document.getElementById('lockPreviewImg');
+  const removeBtn = document.getElementById('imageRemove');
+  const zoomRow = document.getElementById('lockZoomRow');
+  const lockPreview = document.getElementById('lockPreview');
+
+  if (url) {
+    placeholder.style.display = 'none';
+    previewImg.src = url;
+    previewImg.style.display = 'block';
+    previewImg.style.transform = `translate(${lockBgPanX}%, ${lockBgPanY}%) scale(${lockBgZoom})`;
+    removeBtn.style.display = 'flex';
+    zoomRow.style.display = 'flex';
+    lockPreview?.classList.add('has-image');
+  } else {
+    placeholder.style.display = 'flex';
+    previewImg.src = '';
+    previewImg.style.display = 'none';
+    removeBtn.style.display = 'none';
+    zoomRow.style.display = 'none';
+    lockPreview?.classList.remove('has-image');
+  }
+}
+
+// ===== 이벤트 리스너 =====
+
+// 잠금 상태에서 휠 버튼 클릭시 잠금 해제 (capture phase)
+document.getElementById('wheel')?.addEventListener('click', (e) => {
+  if (isLocked) {
+    e.stopPropagation();
+    hideLockScreen();
+  }
+}, true);
+
+document.getElementById('lock-led-icon')?.addEventListener('click', () => {
+  if (isLocked) {
+    hideLockScreen();
+  } else {
+    showLockScreen();
+  }
+});
+
+document.getElementById("lock-screen")?.addEventListener("click", () => {
+  if (isLocked) hideLockScreen();
+});
+
+// ===== 이미지 드래그 (위치 조정) =====
+let _dragActive = false;
+let _dragStartX = 0, _dragStartY = 0;
+let _dragStartPosX = 50, _dragStartPosY = 50;
+
+document.getElementById('lockPreview')?.addEventListener('mousedown', (e) => {
+  if (!lockBgImageUrl) return;
+  _dragActive = true;
+  _dragStartX = e.clientX;
+  _dragStartY = e.clientY;
+  _dragStartPosX = lockBgPanX;
+  _dragStartPosY = lockBgPanY;
+  e.preventDefault();
+});
+
+document.addEventListener('mousemove', (e) => {
+  if (!_dragActive) return;
+  const preview = document.getElementById('lockPreview');
+  if (!preview) return;
+  const rect = preview.getBoundingClientRect();
+  const dx = (e.clientX - _dragStartX) / rect.width * 100;
+  const dy = (e.clientY - _dragStartY) / rect.height * 100;
+  const maxPan = (lockBgZoom - 1) / 2 * 100;
+  lockBgPanX = Math.max(-maxPan, Math.min(maxPan, _dragStartPosX + dx));
+  lockBgPanY = Math.max(-maxPan, Math.min(maxPan, _dragStartPosY + dy));
+  const previewImg = document.getElementById('lockPreviewImg');
+  if (previewImg) previewImg.style.transform = `translate(${lockBgPanX}%, ${lockBgPanY}%) scale(${lockBgZoom})`;
+});
+
+document.addEventListener('mouseup', () => { _dragActive = false; });
+
+// ===== 줌 슬라이더 =====
+document.getElementById('lockZoomSlider')?.addEventListener('input', (e) => {
+  lockBgZoom = Number(e.target.value);
+  const zoomVal = document.getElementById('lockZoomVal');
+  if (zoomVal) zoomVal.textContent = `${lockBgZoom.toFixed(1)}×`;
+  const maxPan = (lockBgZoom - 1) / 2 * 100;
+  lockBgPanX = Math.max(-maxPan, Math.min(maxPan, lockBgPanX));
+  lockBgPanY = Math.max(-maxPan, Math.min(maxPan, lockBgPanY));
+  const previewImg = document.getElementById('lockPreviewImg');
+  if (previewImg) previewImg.style.transform = `translate(${lockBgPanX}%, ${lockBgPanY}%) scale(${lockBgZoom})`;
+});
+
+document.querySelectorAll('.mini-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    const targetTab = tab.dataset.tab;
+    document.querySelectorAll('.mini-tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    document.querySelectorAll('.mini-tab-content').forEach(c => c.classList.remove('active'));
+    document.querySelector(`[data-content="${targetTab}"]`)?.classList.add('active');
+  });
+});
+
+document.getElementById('urlBtn')?.addEventListener('click', () => {
+  const urlInput = document.getElementById('urlInput');
+  urlInput.style.display = (urlInput.style.display === 'none' || !urlInput.style.display) ? 'flex' : 'none';
+});
+
+document.getElementById('urlApply')?.addEventListener('click', () => {
+  const url = document.getElementById('lockBgImageInput').value;
+  if (url) {
+    lockBgImageUrl = url;
+    lockBgPanX = 0; lockBgPanY = 0; lockBgZoom = 1;
+    _resetZoomUI();
+    updateImagePreview(url);
+    document.getElementById('urlInput').style.display = 'none';
+  }
+});
+
+document.getElementById('imageRemove')?.addEventListener('click', () => {
+  lockBgImageUrl = "";
+  lockBgPosX = 50; lockBgPosY = 50; lockBgZoom = 1;
+  document.getElementById('lockBgImageInput').value = "";
+  _resetZoomUI();
+  updateImagePreview("");
+});
+
+document.getElementById("lockBgImageFile")?.addEventListener("change", (e) => {
+  const file = e.target.files[0];
+  if (file) {
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      lockBgImageUrl = event.target.result;
+      lockBgPanX = 0; lockBgPanY = 0; lockBgZoom = 1;
+      _resetZoomUI();
+      updateImagePreview(lockBgImageUrl);
+    };
+    reader.readAsDataURL(file);
+  }
+});
+
+function _resetZoomUI() {
+  const slider = document.getElementById('lockZoomSlider');
+  const val = document.getElementById('lockZoomVal');
+  if (slider) slider.value = 1;
+  if (val) val.textContent = '1.0×';
+}
+
+// 앱 시작 시 테마 초기화 (loadSettingsData가 비동기로 curTheme을 덮어쓰지 않도록)
+(async () => {
+  const theme = await window.api?.getTheme();
+  if (theme) {
+    curTheme = theme;
+    document.querySelectorAll(".mini-theme").forEach((i) => i.classList.remove("active"));
+    document.querySelector(`.mini-theme[data-theme="${theme}"]`)?.classList.add("active");
+  }
+})();

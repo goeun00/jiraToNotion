@@ -27,4 +27,8 @@ contextBridge.exposeInMainWorld("api", {
   // 로드워크 저장
   exportWorkReport: (rows, month) =>
     ipcRenderer.invoke("export-work-report", rows, month),
+
+  // 잠금 배경 이미지
+  loadLockBg: () => ipcRenderer.invoke("load-lock-bg"),
+  saveLockBg: (data) => ipcRenderer.invoke("save-lock-bg", data),
 });

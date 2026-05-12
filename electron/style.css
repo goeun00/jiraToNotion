@@ -29,7 +29,7 @@
 }
 
 [data-theme="bk"] {
-  --body-bg: #1e1e20;
+  --body-bg: #2a2a2c;
   --body-border: #3a3a3c;
   --body-sh: rgba(0, 0, 0, 0.3);
   --wheel-bg: #2c2c2e;
@@ -136,11 +136,74 @@ body {
   border: 1px solid var(--body-border);
   border-radius: var(--radius-device);
   background: var(--body-bg);
-  box-shadow: 0 4px 16px var(--body-sh);
+  box-shadow: 0 4px 10px var(--body-sh);
   gap: 12px;
   flex-direction: column;
   -webkit-app-region: drag;
   user-select: none;
+}
+
+.silicone-case {
+  isolation: isolate;
+  border-color: rgba(255, 255, 255, 0.4);
+  background:
+    radial-gradient(
+      circle at 18% 10%,
+      rgba(255, 255, 255, 0.32),
+      transparent 26%
+    ),
+    color-mix(in srgb, var(--body-bg) 88%, #ffffff 12%);
+  box-shadow:
+    0 11px 20px rgba(0, 0, 0, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    inset 0 -14px 24px rgba(0, 0, 0, 0.05);
+}
+
+.silicone-case::before {
+  content: "";
+  position: absolute;
+  inset: -6px;
+  z-index: -1;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: calc(var(--radius-device) + 6px);
+  background:
+    linear-gradient(
+      145deg,
+      rgba(255, 255, 255, 0.18),
+      transparent 45%,
+      rgba(0, 0, 0, 0.08)
+    ),
+    color-mix(in srgb, var(--body-bg) 74%, transparent 26%);
+  box-shadow:
+    inset 0 2px 6px rgba(255, 255, 255, 0.36),
+    inset 0 -12px 22px rgba(0, 0, 0, 0.08),
+    0 9px 8px rgba(0, 0, 0, 0.04);
+  backdrop-filter: blur(4px) saturate(1.18);
+  pointer-events: none;
+  opacity: 0.95;
+}
+
+.silicone-case::after {
+  content: "";
+  position: absolute;
+  inset: -5px;
+  z-index: 1;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: calc(var(--radius-device) + 5px);
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180' viewBox='0 0 180 180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.88' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3CfeComponentTransfer%3E%3CfeFuncA type='table' tableValues='0 .18'/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)' opacity='.42'/%3E%3C/svg%3E"),
+    linear-gradient(
+      115deg,
+      transparent 0 13%,
+      rgba(255, 255, 255, 0.1) 100%,
+      transparent 25%
+    );
+  background-size:
+    145px 145px,
+    auto;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+  opacity: 0.4;
+  pointer-events: none;
 }
 
 /* ─────────────────────────────────────
@@ -159,6 +222,7 @@ body {
   border-radius: 8px;
   background: #0a0a0a;
   box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.6);
+  z-index: 10;
 }
 
 .screen {
@@ -557,12 +621,13 @@ body {
   justify-content: center;
   align-items: center;
   flex-shrink: 0;
+  z-index: 10;
 }
 
 .wheel {
   position: relative;
-  width: 130px;
-  height: 130px;
+  width: 140px;
+  height: 140px;
   border-radius: 50%;
   user-select: none;
 }
@@ -974,4 +1039,356 @@ body {
 .btn-save {
   background: var(--lcd-sel-bg);
   color: var(--lcd-sel-fg);
+}
+/* ===================================
+   추가 스타일 - style.css 끝에 추가하세요
+   =================================== */
+
+/* LCD 헤더 좌측 네온 LED 자물쇠 */
+.lock-led-icon {
+  width: 12px;
+  height: 12px;
+  cursor: pointer;
+  color: var(--lcd-dim);
+  opacity: 0.3;
+  transition: all 0.3s ease;
+  filter: drop-shadow(0 0 0 transparent);
+  flex-shrink: 0;
+  margin-right: 6px;
+  -webkit-app-region: no-drag;
+  position: absolute;
+  top: 7px;
+  left: 7px;
+}
+
+.lock-led-icon:hover {
+  opacity: 0.5;
+  transform: scale(1.1);
+}
+
+.lock-led-icon:active {
+  transform: scale(0.95);
+}
+
+.lock-led-icon.locked {
+  color: #ff4444;
+  opacity: 1;
+  filter: drop-shadow(0 0 2px #ff4444)
+    drop-shadow(0 0 4px rgba(255, 68, 68, 0.6));
+  animation: neonPulse 2s ease-in-out infinite;
+}
+
+@keyframes neonPulse {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 2px #ff4444)
+      drop-shadow(0 0 4px rgba(255, 68, 68, 0.6));
+  }
+  50% {
+    filter: drop-shadow(0 0 3px #ff4444)
+      drop-shadow(0 0 6px rgba(255, 68, 68, 0.8));
+  }
+}
+
+/* 잠금화면 기본 (숨김) */
+.lock-screen {
+  display: none;
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  border-radius: 5px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  background: var(--lcd-bg);
+  -webkit-app-region: no-drag;
+}
+
+.lock-screen.show {
+  display: flex;
+}
+
+/* 잠금화면 이미지 배경 */
+.lock-bg-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 50%;
+  filter: grayscale(1);
+  display: none;
+  z-index: 0;
+}
+
+.lock-screen[data-bg="image"] .lock-bg-img {
+  display: block;
+}
+
+.lock-screen[data-bg="image"] .lock-time {
+  color: #fff;
+  position: relative;
+  z-index: 1;
+  text-shadow:
+    0 2px 12px rgba(0, 0, 0, 0.9),
+    0 0 20px rgba(0, 0, 0, 0.7);
+}
+
+.lock-screen[data-bg="image"] .lock-date,
+.lock-screen[data-bg="image"] .lock-tap-hint {
+  position: relative;
+  z-index: 1;
+  color: rgba(255, 255, 255, 0.9);
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.8);
+}
+
+.lock-time {
+  font-size: 32px;
+  font-weight: 900;
+  color: var(--lcd-text);
+  line-height: 1;
+  text-shadow: 0 2px 4px var(--body-sh);
+}
+
+.lock-date {
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--lcd-dim);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.lock-tap-hint {
+  position: absolute;
+  bottom: 12px;
+  font-size: 7px;
+  color: var(--lcd-dim);
+  text-align: center;
+  animation: tapHintPulse 2s ease-in-out infinite;
+  opacity: 0.6;
+}
+
+@keyframes tapHintPulse {
+  0%,
+  100% {
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 0.8;
+  }
+}
+
+/* 설정창 탭 */
+.mini-tabs {
+  display: flex;
+  gap: 2px;
+  padding: 4px 8px 0 8px;
+  background: transparent;
+  border-bottom: 1px solid var(--lcd-div);
+  flex-shrink: 0;
+}
+
+.mini-tab {
+  flex: 1;
+  padding: 5px 8px;
+  border: none;
+  background: transparent;
+  color: var(--lcd-dim);
+  font-size: 8px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  transition: all 0.15s;
+  border-bottom: 2px solid transparent;
+  font-family: inherit;
+}
+
+.mini-tab:hover {
+  color: var(--lcd-text);
+}
+
+.mini-tab.active {
+  color: var(--lcd-text);
+  border-bottom-color: var(--lcd-text);
+}
+
+.mini-tab-content {
+  display: none;
+}
+
+.mini-tab-content.active {
+  display: block;
+}
+
+/* 잠금화면 미리보기 (설정창) */
+.lock-preview {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 186 / 187;
+  border-radius: 5px;
+  overflow: hidden;
+  background: var(--lcd-bg);
+  border: 1px dashed var(--lcd-div);
+  cursor: default;
+  user-select: none;
+}
+
+.lock-preview.has-image {
+  cursor: move;
+  border-style: solid;
+  border-color: var(--lcd-dim);
+}
+
+.lock-preview-placeholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  color: var(--lcd-dim);
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.lock-preview-placeholder span {
+  font-size: 7px;
+  font-weight: 600;
+}
+
+.lock-preview-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: grayscale(1);
+  display: none;
+  pointer-events: none;
+}
+
+/* 줌 슬라이더 */
+.lock-zoom-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 5px;
+}
+
+.lock-zoom-label {
+  font-size: 8px;
+  font-weight: 600;
+  color: var(--lcd-dim);
+  flex-shrink: 0;
+}
+
+.lock-zoom-slider {
+  flex: 1;
+  height: 2px;
+  cursor: pointer;
+  accent-color: var(--lcd-text);
+}
+
+.lock-zoom-val {
+  font-size: 8px;
+  color: var(--lcd-text);
+  width: 26px;
+  text-align: right;
+  flex-shrink: 0;
+  font-weight: 600;
+}
+
+.mini-image-remove {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 18px;
+  height: 18px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.6);
+  color: white;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.mini-image-remove:hover {
+  background: rgba(255, 68, 68, 0.9);
+  transform: scale(1.1);
+}
+
+.mini-image-actions {
+  display: flex;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.mini-image-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 6px 8px;
+  border: 1px solid var(--lcd-div);
+  border-radius: 4px;
+  background: var(--lcd-auto-bg);
+  color: var(--lcd-text);
+  font-size: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: inherit;
+}
+
+.mini-image-btn:hover {
+  background: var(--lcd-sel-bg);
+  color: var(--lcd-sel-fg);
+  border-color: var(--lcd-sel-bg);
+}
+
+.mini-image-btn svg {
+  width: 10px;
+  height: 10px;
+}
+
+.mini-url-input {
+  margin-top: 6px;
+  display: flex;
+  gap: 4px;
+  align-items: stretch;
+}
+
+.mini-url-input .mini-input {
+  flex: 1;
+}
+
+.mini-url-apply {
+  padding: 0 10px;
+  border: 1px solid var(--lcd-div);
+  border-radius: 4px;
+  background: var(--lcd-sel-bg);
+  color: var(--lcd-sel-fg);
+  font-size: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: inherit;
+  white-space: nowrap;
+}
+
+.mini-url-apply:hover {
+  opacity: 0.9;
+}
+
+.mini-file-input {
+  display: none;
 }
