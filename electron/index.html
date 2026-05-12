@@ -16,27 +16,20 @@
 
             <!-- LCD 헤더 -->
             <div class="scr-head">
-              <span class="scr-name" id="scr-title">NotionFlow</span>
+                <div class="month-group">
+                  <button type="button" class="month-btn" id="prevMonth">‹</button>
+                  <span class="month-label" id="workMonth">2026.05</span>
+                  <button type="button" class="month-btn" id="nextMonth">›</button>
+                </div>
               <div class="head-right">
                 <span class="auto-badge" id="auto-badge">AUTO</span>
               </div>
             </div>
 
             <div class="work-panel">
-              <div class="work-panel__head">
-                <div class="month-group">
-                  <button type="button" class="month-btn" id="prevMonth">‹</button>
-                  <span class="month-label" id="workMonth">2026.05</span>
-                  <button type="button" class="month-btn" id="nextMonth">›</button>
-                </div>
-
-                <div class="work-actions">
-                  <span class="work-panel__percent" id="workRate">67%</span>
-                  <button type="button" class="work-export" id="exportWorkReport">↧</button>
-                  <button type="button" class="work-refresh" id="refreshWorklog">↻</button>
-                </div>
+              <div class="work-actions">
+                <button type="button" class="work-refresh" id="refreshWorklog">↻</button>
               </div>
-
               <div class="work-panel__meta">
                 <div class="work-panel__value">
                   <strong id="loggedDays">4.7D</strong>
@@ -93,7 +86,7 @@
       <div class="settings-mini">
         <!-- 헤더 -->
         <div class="mini-header">
-          <h1 class="mini-title">⚙️ Settings</h1>
+          <h1 class="mini-title">Settings</h1>
           <button class="mini-close" id="closeSettings">×</button>
         </div>
 
@@ -101,7 +94,7 @@
         <div class="mini-content">
           <!-- API -->
           <div class="mini-section">
-            <div class="mini-label">🔗 Jira</div>
+            <div class="mini-label">Jira</div>
             <div class="mini-field">
               <input type="text" class="mini-input" id="jiraUrl" placeholder="domain.atlassian.net" />
             </div>
@@ -111,7 +104,7 @@
           </div>
 
           <div class="mini-section">
-            <div class="mini-label">📝 Notion</div>
+            <div class="mini-label">Notion</div>
             <div class="mini-field">
               <input type="password" class="mini-input" id="notionToken" placeholder="Token" />
             </div>
@@ -124,7 +117,7 @@
           </div>
 
           <div class="mini-section">
-            <div class="mini-label">💻 GitHub</div>
+            <div class="mini-label">GitHub</div>
             <div class="mini-field">
               <input type="password" class="mini-input" id="githubToken" placeholder="Token" />
             </div>
@@ -136,7 +129,7 @@
             </div>
           </div>
           <div class="mini-section">
-            <div class="mini-label">📈 Worklog</div>
+            <div class="mini-label">Worklog</div>
             <div class="mini-field">
               <input
                 type="number"
@@ -149,7 +142,7 @@
           </div>
           <!-- Theme -->
           <div class="mini-section">
-            <div class="mini-label">🎨 Theme</div>
+            <div class="mini-label">Theme</div>
             <div class="mini-themes">
               <div class="mini-theme theme-s active" data-theme="s"></div>
               <div class="mini-theme theme-bk" data-theme="bk"></div>

@@ -27,8 +27,8 @@ let settingsWin;
 
 function createWindow() {
   win = new BrowserWindow({
-    width: 240,
-    height: 363,
+    width: 250,
+    height: 373,
     frame: false,
     titleBarStyle: "hidden",
     transparent: true,
@@ -129,7 +129,6 @@ WORKLOG_TARGET_DAYS=${data.WORKLOG_TARGET_DAYS || "7"}
 NOTION_TOKEN=${data.NOTION_TOKEN}
 NOTION_SOURCE_ID_JIRA=${data.NOTION_SOURCE_ID_JIRA}
 NOTION_SOURCE_ID_PR=${data.NOTION_SOURCE_ID_PR}
-NOTION_SOURCE_ID_REVIEW=${data.NOTION_SOURCE_ID_REVIEW}
 
 GITHUB_TOKEN=${data.GITHUB_TOKEN}
 GITHUB_USERNAME=${data.GITHUB_USERNAME}

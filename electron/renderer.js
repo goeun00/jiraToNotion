@@ -44,19 +44,12 @@ function getLogworkData(offset = 0) {
 const MAIN_ITEMS = [
   { label: "Sync Jira", act: "sync-jira" },
   { label: "Sync PR", act: "sync-pr" },
+  { label: "Export Excel", act: "export-work-report" },
 ];
 
 /* ─────────────────────────────────────
    뷰 전환
 ───────────────────────────────────── */
-function applyView(id, title) {
-  VIEWS.forEach((v) => {
-    const el = document.getElementById(v);
-    if (el) el.classList.toggle("show", v === id);
-  });
-  document.getElementById("msg-view").classList.remove("show");
-  document.getElementById("scr-title").textContent = title || "NotionFlow";
-}
 
 function currentViewId() {
   return viewStack[viewStack.length - 1];
@@ -86,9 +79,11 @@ function renderMenu(elId, items) {
 ───────────────────────────────────── */
 function execItem(idx) {
   if (busy) return;
+
   const vid = currentViewId();
   const items = vid === "menu-view" ? MAIN_ITEMS : null;
   if (!items) return;
+
   const it = items[idx];
   if (!it) return;
 
@@ -96,8 +91,14 @@ function execItem(idx) {
     startSync("jira");
     return;
   }
+
   if (it.act === "sync-pr") {
     startSync("pr");
+    return;
+  }
+
+  if (it.act === "export-work-report") {
+    exportWorkReport();
     return;
   }
 }
@@ -111,21 +112,32 @@ let _subIv = null;
 
 function startSync(type) {
   if (busy) return;
-  busy = true;
-  _ctx = { type, total: 0, created: 0, updated: 0, deleted: 0, elapsed: null };
 
-  showMsgLoading(type);
+  busy = true;
+  _ctx = {
+    type,
+    total: 0,
+    created: 0,
+    updated: 0,
+    deleted: 0,
+    elapsed: null,
+  };
+
+  showMsgLoading({ type });
   startWarmup();
   startSubCycle(type);
 
   const fn = type === "jira" ? window.api?.syncJira : window.api?.syncPR;
+
   fn?.()
     .then(() => {
       stopWarmup();
       stopSubCycle();
       setProg(100);
+
       setTimeout(() => {
         showMsgResult();
+
         setTimeout(() => {
           hideMsgView();
           busy = false;
@@ -135,71 +147,116 @@ function startSync(type) {
     })
     .catch((err) => {
       console.error(err);
+
       stopWarmup();
       stopSubCycle();
       hideMsgView();
+
       busy = false;
       _ctx = null;
     });
 }
 
-function showMsgLoading(type) {
-  document.getElementById("msg-view").classList.add("show");
-  document.getElementById("msg-loading").classList.remove("hide");
-  document.getElementById("msg-result").classList.remove("show");
-  document.getElementById("msg-main").textContent =
-    type === "jira" ? "Sync Jira" : "Sync PR";
-  document.getElementById("msg-sub").textContent = "준비 중...";
-  setProg(0);
+/* ─────────────────────────────────────
+   메시지 UI
+───────────────────────────────────── */
+function showMsgLoading(options = {}) {
+  const {
+    type,
+    title,
+    sub = "준비 중...",
+    progress = true,
+    percent = 0,
+  } = options;
+
+  const msgView = document.getElementById("msg-view");
+  const msgLoading = document.getElementById("msg-loading");
+  const msgResult = document.getElementById("msg-result");
+  const msgMain = document.getElementById("msg-main");
+  const msgSub = document.getElementById("msg-sub");
+  const progressWrap = document.getElementById("msg-prog-wrap");
+
+  msgView?.classList.add("show");
+  msgLoading?.classList.remove("hide");
+  msgResult?.classList.remove("show");
+
+  if (msgMain) {
+    msgMain.textContent =
+      title || (type === "jira" ? "Sync Jira" : type === "pr" ? "Sync PR" : "");
+  }
+
+  if (msgSub) {
+    msgSub.textContent = sub;
+  }
+
+  if (progressWrap) {
+    progressWrap.style.display = progress ? "" : "none";
+  }
+
+  if (progress) {
+    setProg(percent);
+  }
 }
 
 function showMsgResult() {
-  document.getElementById("msg-loading").classList.add("hide");
+  document.getElementById("msg-loading")?.classList.add("hide");
+
   const res = document.getElementById("msg-result");
-  res.classList.add("show");
-  document.getElementById("result-title").textContent = "완료";
+  res?.classList.add("show");
+
+  const resultTitle = document.getElementById("result-title");
+  if (resultTitle) {
+    resultTitle.textContent = "완료";
+  }
+
   const stats = document.getElementById("result-stats");
-  stats.innerHTML = "";
-  if (_ctx.created > 0) {
-    stats.innerHTML += `<span class="stat-pill created">+${_ctx.created}</span>`;
+  if (stats) {
+    stats.innerHTML = "";
+
+    if (_ctx.created > 0) {
+      stats.innerHTML += `<span class="stat-pill created">+${_ctx.created}</span>`;
+    }
+
+    if (_ctx.updated > 0) {
+      stats.innerHTML += `<span class="stat-pill updated">~${_ctx.updated}</span>`;
+    }
+
+    if (_ctx.deleted > 0) {
+      stats.innerHTML += `<span class="stat-pill deleted">-${_ctx.deleted}</span>`;
+    }
   }
-  if (_ctx.updated > 0) {
-    stats.innerHTML += `<span class="stat-pill updated">~${_ctx.updated}</span>`;
-  }
-  if (_ctx.deleted > 0) {
-    stats.innerHTML += `<span class="stat-pill deleted">-${_ctx.deleted}</span>`;
-  }
+
   if (_ctx.elapsed) {
-    document.getElementById("result-elapsed").textContent = `${_ctx.elapsed}s`;
+    const elapsed = document.getElementById("result-elapsed");
+    if (elapsed) {
+      elapsed.textContent = `${_ctx.elapsed}s`;
+    }
   }
 }
 
 function hideMsgView() {
-  document.getElementById("msg-view").classList.remove("show");
-}
-
-function showMsgPlain(title, sub) {
-  document.getElementById("msg-view").classList.add("show");
-  document.getElementById("msg-loading").classList.remove("hide");
-  document.getElementById("msg-result").classList.remove("show");
-  document.getElementById("msg-main").textContent = title;
-  document.getElementById("msg-sub").textContent = sub;
-  document.getElementById("msg-prog-wrap").style.display = "none";
+  document.getElementById("msg-view")?.classList.remove("show");
 }
 
 function setProg(val) {
-  document.getElementById("msg-prog-fill").style.width = val + "%";
+  const fill = document.getElementById("msg-prog-fill");
+  if (fill) {
+    fill.style.width = val + "%";
+  }
 }
 
 function bumpProg() {
   if (!_ctx || _ctx.total === 0) return;
+
   const done = _ctx.created + _ctx.updated + _ctx.deleted;
   const pct = Math.min(95, 50 + Math.floor((done / _ctx.total) * 45));
+
   setProg(pct);
 }
 
 function startWarmup() {
   let p = 0;
+
   _warmupIv = setInterval(() => {
     if (p < 25) {
       p += 1;
@@ -207,6 +264,7 @@ function startWarmup() {
     }
   }, 80);
 }
+
 function stopWarmup() {
   if (_warmupIv) {
     clearInterval(_warmupIv);
@@ -232,13 +290,17 @@ function startSubCycle(type) {
           "Notion 페이지 조회 중",
           "Notion 업데이트 중",
         ];
+
   let i = 0;
+
   _subIv = setInterval(() => {
     i = Math.min(i + 1, steps.length - 1);
+
     const el = document.getElementById("msg-sub");
     if (el) el.textContent = steps[i];
   }, 2200);
 }
+
 function stopSubCycle() {
   if (_subIv) {
     clearInterval(_subIv);
@@ -251,6 +313,7 @@ function stopSubCycle() {
 ───────────────────────────────────── */
 function parseLog(msg) {
   if (!_ctx) return;
+
   const mF = msg.match(/Fetched\s+(\d+)/i);
   if (mF) {
     stopWarmup();
@@ -258,21 +321,25 @@ function parseLog(msg) {
     setProg(50);
     return;
   }
+
   if (/^\+\s/.test(msg)) {
     _ctx.created++;
     bumpProg();
     return;
   }
+
   if (/^~\s/.test(msg)) {
     _ctx.updated++;
     bumpProg();
     return;
   }
+
   if (/^-\s/.test(msg)) {
     _ctx.deleted++;
     bumpProg();
     return;
   }
+
   const mS = msg.match(/created=(\d+),?\s*updated=(\d+),?\s*deleted=(\d+)/i);
   if (mS) {
     _ctx.created = parseInt(mS[1], 10);
@@ -280,9 +347,11 @@ function parseLog(msg) {
     _ctx.deleted = parseInt(mS[3], 10);
     setProg(95);
   }
+
   const mE = msg.match(/Elapsed time:\s*([\d.]+)s/i);
   if (mE) _ctx.elapsed = mE[1];
 }
+
 window.api?.onLog((msg) => parseLog(msg));
 
 /* ─────────────────────────────────────
@@ -307,7 +376,13 @@ async function fetchLogwork() {
     renderLogwork();
   } catch (err) {
     console.warn(err);
-    showMsgPlain("Worklog", "불러오기에 실패했어요");
+
+    showMsgLoading({
+      title: "Worklog",
+      sub: "불러오기에 실패했어요",
+      progress: false,
+    });
+
     setTimeout(hideMsgView, 1400);
   } finally {
     refreshBtn?.classList.remove("is-spin");
@@ -324,11 +399,13 @@ function renderLogwork() {
 
   document.getElementById("workMonth").textContent =
     data.label || (data.month ? data.month.replace("-", ".") : "-");
+
   document.getElementById("loggedDays").textContent =
     `${formatDecimal(logged)}D`;
+
   document.getElementById("targetDays").textContent =
     `/ ${formatDecimal(target)}D`;
-  document.getElementById("workRate").textContent = `${rate}%`;
+
   document.getElementById("workProgress").style.width = `${rate}%`;
 }
 
@@ -352,7 +429,11 @@ function buildWorkReportRows() {
     if (!key) return;
 
     if (!group.has(key)) {
-      group.set(key, { issueKey: key, logs: [], seconds: 0 });
+      group.set(key, {
+        issueKey: key,
+        logs: [],
+        seconds: 0,
+      });
     }
 
     const item = group.get(key);
@@ -399,40 +480,55 @@ function buildWorkReportRows() {
 
 window.buildWorkReportRows = buildWorkReportRows;
 
-//
-document
-  .getElementById("exportWorkReport")
-  ?.addEventListener("click", async () => {
-    const btn = document.getElementById("exportWorkReport");
+async function exportWorkReport() {
+  if (busy) return;
 
-    try {
-      btn?.classList.add("is-exporting");
+  const btn = document.getElementById("exportWorkReport");
 
-      const rows = buildWorkReportRows();
-      const { month } = getLogworkData(state.logworkOffset);
+  try {
+    busy = true;
+    btn?.classList.add("is-exporting");
 
-      if (!rows.length) {
-        showMsgPlain("Excel Export", "내보낼 로그워크가 없어요");
-        setTimeout(hideMsgView, 1600);
-        return;
-      }
+    const rows = buildWorkReportRows();
+    const { month } = getLogworkData(state.logworkOffset);
 
-      const result = await window.api.exportWorkReport(rows, month);
+    if (!rows.length) {
+      showMsgLoading({
+        title: "Excel Export",
+        sub: "내보낼 로그워크가 없어요",
+        progress: false,
+      });
 
-      if (!result?.canceled) {
-        showMsgPlain("Excel Export", "엑셀 열었어요!");
-        setTimeout(hideMsgView, 1600);
-      }
-    } catch (err) {
-      console.warn(err);
-
-      showMsgPlain("Excel Export", err?.message || "내보내기에 실패했어요");
-
-      setTimeout(hideMsgView, 2200);
-    } finally {
-      btn?.classList.remove("is-exporting");
+      setTimeout(hideMsgView, 1600);
+      return;
     }
-  });
+
+    const result = await window.api?.exportWorkReport(rows, month);
+
+    if (!result?.canceled) {
+      showMsgLoading({
+        title: "Excel Export",
+        sub: "엑셀 열었어요!",
+        progress: false,
+      });
+
+      setTimeout(hideMsgView, 1600);
+    }
+  } catch (err) {
+    console.warn(err);
+
+    showMsgLoading({
+      title: "Excel Export",
+      sub: err?.message || "내보내기에 실패했어요",
+      progress: false,
+    });
+
+    setTimeout(hideMsgView, 2200);
+  } finally {
+    btn?.classList.remove("is-exporting");
+    busy = false;
+  }
+}
 
 /* ─────────────────────────────────────
    AUTO badge
@@ -446,12 +542,14 @@ function updateAutoBadge() {
 ───────────────────────────────────── */
 function nav(dir) {
   if (busy) return;
+
   if (dir === "auto") {
     autoOn = !autoOn;
     updateAutoBadge();
     autoOn ? window.api?.autoSync() : window.api?.stopAutoSync();
     return;
   }
+
   const items = MAIN_ITEMS;
   if (dir === "up") {
     curIdx = (curIdx - 1 + items.length) % items.length;
@@ -462,6 +560,7 @@ function nav(dir) {
     renderCurrentMenu();
   }
 }
+
 function doSelect() {
   if (busy) return;
   execItem(curIdx);
@@ -475,23 +574,27 @@ const contextMenu = document.getElementById("contextMenu");
 
 // 휠 버튼 클릭 이벤트
 document.getElementById("btn-up").addEventListener("click", () => nav("up"));
+
 document
   .getElementById("btn-down")
   .addEventListener("click", () => nav("down"));
+
 document.getElementById("btn-settings").addEventListener("click", () => {
   openSettings();
 });
+
 document
   .getElementById("btn-auto")
   .addEventListener("click", () => nav("auto"));
+
 document
   .getElementById("btn-center")
   .addEventListener("click", () => doSelect());
 
 // 우클릭 메뉴
-
 ipod.addEventListener("contextmenu", (e) => {
   e.preventDefault();
+
   contextMenu.style.left = e.clientX + "px";
   contextMenu.style.top = e.clientY + "px";
   contextMenu.classList.add("show");
@@ -547,10 +650,14 @@ async function loadSettingsData() {
 
   // 현재 테마 로드
   const theme = await window.api?.getTheme();
+
   if (theme) {
+    curTheme = theme;
+
     document
       .querySelectorAll(".mini-theme")
       .forEach((i) => i.classList.remove("active"));
+
     document
       .querySelector(`.mini-theme[data-theme="${theme}"]`)
       ?.classList.add("active");
@@ -565,30 +672,43 @@ async function saveSettingsData() {
     NOTION_TOKEN: document.getElementById("notionToken").value,
     NOTION_SOURCE_ID_JIRA: document.getElementById("notionSourceJira").value,
     NOTION_SOURCE_ID_PR: document.getElementById("notionSourcePR").value,
-    NOTION_SOURCE_ID_REVIEW: "",
     GITHUB_TOKEN: document.getElementById("githubToken").value,
     GITHUB_USERNAME: document.getElementById("githubUsername").value,
     GITHUB_URL: document.getElementById("githubUrl").value,
     WORKLOG_TARGET_DAYS: document.getElementById("targetLog").value || "7",
   };
 
-  await window.api?.saveEnv(data);
-
-  const selectedTheme =
-    document.querySelector(".mini-theme.active")?.dataset.theme;
-  if (selectedTheme) {
-    await window.api?.setTheme(selectedTheme);
-  }
-
-  const cur = state.logwork[logworkKey(state.logworkOffset)];
-  if (cur) {
-    cur.target = getTargetDays();
-    renderLogwork();
-  }
+  const nextTarget = Number(data.WORKLOG_TARGET_DAYS || 7);
+  const nextTheme = curTheme;
 
   closeSettingsPopover();
-}
 
+  requestAnimationFrame(async () => {
+    try {
+      await Promise.all([
+        window.api?.saveEnv(data),
+        nextTheme ? window.api?.saveTheme?.(nextTheme) : Promise.resolve(),
+      ]);
+
+      const cur = state.logwork[logworkKey(state.logworkOffset)];
+
+      if (cur) {
+        cur.target = nextTarget;
+        renderLogwork();
+      }
+    } catch (err) {
+      console.warn(err);
+
+      showMsgLoading({
+        title: "Settings",
+        sub: "저장에 실패했어요",
+        progress: false,
+      });
+
+      setTimeout(hideMsgView, 1600);
+    }
+  });
+}
 // 이벤트 리스너
 closeSettingsBtn.addEventListener("click", closeSettingsPopover);
 cancelSettingsBtn.addEventListener("click", closeSettingsPopover);
@@ -604,13 +724,16 @@ settingsOverlay.addEventListener("click", (e) => {
 // 테마 선택
 document.querySelectorAll(".mini-theme").forEach((item) => {
   item.addEventListener("click", () => {
+    const selectedTheme = item.dataset.theme;
+    if (!selectedTheme || selectedTheme === curTheme) return;
+    curTheme = selectedTheme;
     document
       .querySelectorAll(".mini-theme")
       .forEach((i) => i.classList.remove("active"));
     item.classList.add("active");
+    document.documentElement.dataset.theme = selectedTheme;
   });
 });
-
 document.getElementById("refreshWorklog")?.addEventListener("click", () => {
   fetchLogwork();
 });
@@ -636,10 +759,11 @@ document.addEventListener("keydown", (e) => {
    초기화
 ───────────────────────────────────── */
 window.addEventListener("DOMContentLoaded", async () => {
-  applyView("menu-view", "NotionFlow");
   document.getElementById("menu-view").classList.add("show");
+
   renderCurrentMenu();
   updateAutoBadge();
+
   await loadSettingsData();
   await fetchLogwork();
 
