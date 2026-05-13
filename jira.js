@@ -238,9 +238,7 @@ function isStartedInRange(started, start, end) {
 
 function getWorklogFetchConcurrency() {
   const value = Number(process.env.WORKLOG_FETCH_CONCURRENCY);
-
   if (Number.isFinite(value) && value > 0) return value;
-
   return DEFAULT_WORKLOG_FETCH_CONCURRENCY;
 }
 
@@ -409,6 +407,7 @@ function mapIssue(jiraBase, issue, reportFieldIds = {}) {
     key: issue.key,
     issueKey: issue.key,
     summary: fields.summary || "",
+    description: fields.description || "",
     status: fields.status?.name || "",
     statusCategory:
       fields.status?.statusCategory?.key ||
@@ -424,6 +423,11 @@ function mapIssue(jiraBase, issue, reportFieldIds = {}) {
       fields.assignee?.displayName || fields.assignee?.name || "",
     ),
     components: fields.components || [],
+
+    // ✅ Notion Logged 계산용
+    aggregatetimespent: Number(fields.aggregatetimespent || 0),
+    worklogs: fields.worklog?.worklogs || [],
+
     url: `${jiraBase}/browse/${issue.key}`,
     ...mapReportDates(fields, reportFieldIds),
   };

@@ -33,7 +33,7 @@ let settingsWin;
 function createWindow() {
   win = new BrowserWindow({
     width: 250,
-    height: 373,
+    height: 380,
     frame: false,
     titleBarStyle: "hidden",
     transparent: true,
@@ -150,27 +150,6 @@ LOCK_BG_ZOOM=${data.LOCK_BG_ZOOM ?? 1}
   fs.writeFileSync(envPath, content);
   Object.assign(process.env, data);
   console.log("✔ Config saved");
-  return true;
-});
-
-// -----------------------------
-// 저장소 설정 (repo-configs.json)
-// configs: [{ name: string, branches: string[] }]
-// -----------------------------
-const repoConfigPath = path.join(__dirname, "repo-configs.json");
-
-ipcMain.handle("load-repo-configs", async () => {
-  if (!fs.existsSync(repoConfigPath)) return [];
-  try {
-    return JSON.parse(fs.readFileSync(repoConfigPath, "utf-8"));
-  } catch {
-    return [];
-  }
-});
-
-ipcMain.handle("save-repo-configs", async (_, configs) => {
-  fs.writeFileSync(repoConfigPath, JSON.stringify(configs, null, 2));
-  console.log("✔ Repo configs saved");
   return true;
 });
 

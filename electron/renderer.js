@@ -5,7 +5,7 @@ const VIEWS = ["menu-view"];
 let viewStack = ["menu-view"];
 let curIdx = 0;
 let busy = false;
-let autoOn = true;
+let autoOn = false;
 let curTheme = "s";
 
 // 잠금 화면 상태
@@ -50,9 +50,9 @@ function getLogworkData(offset = 0) {
 
 /* 메뉴 정의 */
 const MAIN_ITEMS = [
+  { label: "Export Excel", act: "export-work-report" },
   { label: "Sync Jira", act: "sync-jira" },
   { label: "Sync PR", act: "sync-pr" },
-  { label: "Export Excel", act: "export-work-report" },
 ];
 
 /* ─────────────────────────────────────
@@ -662,21 +662,25 @@ async function loadSettingsData() {
 
   // 잠금 설정 로드
   const lockBgData = await window.api?.loadLockBg?.();
-  lockBgImageUrl = lockBgData?.url || '';
+  lockBgImageUrl = lockBgData?.url || "";
   lockBgPanX = Number(env.LOCK_BG_POS_X ?? 0);
   lockBgPanY = Number(env.LOCK_BG_POS_Y ?? 0);
   lockBgZoom = Number(env.LOCK_BG_ZOOM ?? 1) || 1;
 
-  const zoomSlider = document.getElementById('lockZoomSlider');
-  const zoomVal = document.getElementById('lockZoomVal');
+  const zoomSlider = document.getElementById("lockZoomSlider");
+  const zoomVal = document.getElementById("lockZoomVal");
   if (zoomSlider) zoomSlider.value = lockBgZoom;
   if (zoomVal) zoomVal.textContent = `${lockBgZoom.toFixed(1)}×`;
 
   updateImagePreview(lockBgImageUrl);
 
   // 현재 테마 — 이미 curTheme으로 UI가 반영되어 있으므로 active class만 동기화
-  document.querySelectorAll(".mini-theme").forEach((i) => i.classList.remove("active"));
-  document.querySelector(`.mini-theme[data-theme="${curTheme}"]`)?.classList.add("active");
+  document
+    .querySelectorAll(".mini-theme")
+    .forEach((i) => i.classList.remove("active"));
+  document
+    .querySelector(`.mini-theme[data-theme="${curTheme}"]`)
+    ?.classList.add("active");
 }
 
 // 설정 저장
@@ -793,20 +797,33 @@ window.addEventListener("DOMContentLoaded", async () => {
 // ===== 잠금 화면 기능 =====
 function updateLockClock() {
   const now = new Date();
-  
-  const hours = String(now.getHours()).padStart(2, '0');
-  const minutes = String(now.getMinutes()).padStart(2, '0');
+
+  const hours = String(now.getHours()).padStart(2, "0");
+  const minutes = String(now.getMinutes()).padStart(2, "0");
   const timeEl = document.getElementById("lock-time");
   if (timeEl) {
     timeEl.textContent = `${hours}:${minutes}`;
   }
-  
-  const days = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
-  const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+
+  const days = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
+  const months = [
+    "JAN",
+    "FEB",
+    "MAR",
+    "APR",
+    "MAY",
+    "JUN",
+    "JUL",
+    "AUG",
+    "SEP",
+    "OCT",
+    "NOV",
+    "DEC",
+  ];
   const dayName = days[now.getDay()];
   const monthName = months[now.getMonth()];
   const date = now.getDate();
-  
+
   const dateEl = document.getElementById("lock-date");
   if (dateEl) {
     dateEl.textContent = `${dayName}, ${monthName} ${date}`;
@@ -817,9 +834,9 @@ function showLockScreen() {
   isLocked = true;
   updateLockClock();
   lockClockInterval = setInterval(updateLockClock, 1000);
-  
+
   document.getElementById("lock-led-icon")?.classList.add("locked");
-  
+
   const lockScreen = document.getElementById("lock-screen");
   const lockBgImg = document.getElementById("lock-bg-img");
   if (lockScreen) {
@@ -837,52 +854,56 @@ function showLockScreen() {
 
 function hideLockScreen() {
   isLocked = false;
-  
+
   if (lockClockInterval) {
     clearInterval(lockClockInterval);
     lockClockInterval = null;
   }
-  
+
   document.getElementById("lock-led-icon")?.classList.remove("locked");
   document.getElementById("lock-screen")?.classList.remove("show");
 }
 
 function updateImagePreview(url) {
-  const placeholder = document.getElementById('lockPreviewPlaceholder');
-  const previewImg = document.getElementById('lockPreviewImg');
-  const removeBtn = document.getElementById('imageRemove');
-  const zoomRow = document.getElementById('lockZoomRow');
-  const lockPreview = document.getElementById('lockPreview');
+  const placeholder = document.getElementById("lockPreviewPlaceholder");
+  const previewImg = document.getElementById("lockPreviewImg");
+  const removeBtn = document.getElementById("imageRemove");
+  const zoomRow = document.getElementById("lockZoomRow");
+  const lockPreview = document.getElementById("lockPreview");
 
   if (url) {
-    placeholder.style.display = 'none';
+    placeholder.style.display = "none";
     previewImg.src = url;
-    previewImg.style.display = 'block';
+    previewImg.style.display = "block";
     previewImg.style.transform = `translate(${lockBgPanX}%, ${lockBgPanY}%) scale(${lockBgZoom})`;
-    removeBtn.style.display = 'flex';
-    zoomRow.style.display = 'flex';
-    lockPreview?.classList.add('has-image');
+    removeBtn.style.display = "flex";
+    zoomRow.style.display = "flex";
+    lockPreview?.classList.add("has-image");
   } else {
-    placeholder.style.display = 'flex';
-    previewImg.src = '';
-    previewImg.style.display = 'none';
-    removeBtn.style.display = 'none';
-    zoomRow.style.display = 'none';
-    lockPreview?.classList.remove('has-image');
+    placeholder.style.display = "flex";
+    previewImg.src = "";
+    previewImg.style.display = "none";
+    removeBtn.style.display = "none";
+    zoomRow.style.display = "none";
+    lockPreview?.classList.remove("has-image");
   }
 }
 
 // ===== 이벤트 리스너 =====
 
 // 잠금 상태에서 휠 버튼 클릭시 잠금 해제 (capture phase)
-document.getElementById('wheel')?.addEventListener('click', (e) => {
-  if (isLocked) {
-    e.stopPropagation();
-    hideLockScreen();
-  }
-}, true);
+document.getElementById("wheel")?.addEventListener(
+  "click",
+  (e) => {
+    if (isLocked) {
+      e.stopPropagation();
+      hideLockScreen();
+    }
+  },
+  true,
+);
 
-document.getElementById('lock-led-icon')?.addEventListener('click', () => {
+document.getElementById("lock-led-icon")?.addEventListener("click", () => {
   if (isLocked) {
     hideLockScreen();
   } else {
@@ -896,10 +917,12 @@ document.getElementById("lock-screen")?.addEventListener("click", () => {
 
 // ===== 이미지 드래그 (위치 조정) =====
 let _dragActive = false;
-let _dragStartX = 0, _dragStartY = 0;
-let _dragStartPosX = 50, _dragStartPosY = 50;
+let _dragStartX = 0,
+  _dragStartY = 0;
+let _dragStartPosX = 50,
+  _dragStartPosY = 50;
 
-document.getElementById('lockPreview')?.addEventListener('mousedown', (e) => {
+document.getElementById("lockPreview")?.addEventListener("mousedown", (e) => {
   if (!lockBgImageUrl) return;
   _dragActive = true;
   _dragStartX = e.clientX;
@@ -909,64 +932,81 @@ document.getElementById('lockPreview')?.addEventListener('mousedown', (e) => {
   e.preventDefault();
 });
 
-document.addEventListener('mousemove', (e) => {
+document.addEventListener("mousemove", (e) => {
   if (!_dragActive) return;
-  const preview = document.getElementById('lockPreview');
+  const preview = document.getElementById("lockPreview");
   if (!preview) return;
   const rect = preview.getBoundingClientRect();
-  const dx = (e.clientX - _dragStartX) / rect.width * 100;
-  const dy = (e.clientY - _dragStartY) / rect.height * 100;
-  const maxPan = (lockBgZoom - 1) / 2 * 100;
+  const dx = ((e.clientX - _dragStartX) / rect.width) * 100;
+  const dy = ((e.clientY - _dragStartY) / rect.height) * 100;
+  const maxPan = ((lockBgZoom - 1) / 2) * 100;
   lockBgPanX = Math.max(-maxPan, Math.min(maxPan, _dragStartPosX + dx));
   lockBgPanY = Math.max(-maxPan, Math.min(maxPan, _dragStartPosY + dy));
-  const previewImg = document.getElementById('lockPreviewImg');
-  if (previewImg) previewImg.style.transform = `translate(${lockBgPanX}%, ${lockBgPanY}%) scale(${lockBgZoom})`;
+  const previewImg = document.getElementById("lockPreviewImg");
+  if (previewImg)
+    previewImg.style.transform = `translate(${lockBgPanX}%, ${lockBgPanY}%) scale(${lockBgZoom})`;
 });
 
-document.addEventListener('mouseup', () => { _dragActive = false; });
+document.addEventListener("mouseup", () => {
+  _dragActive = false;
+});
 
 // ===== 줌 슬라이더 =====
-document.getElementById('lockZoomSlider')?.addEventListener('input', (e) => {
+document.getElementById("lockZoomSlider")?.addEventListener("input", (e) => {
   lockBgZoom = Number(e.target.value);
-  const zoomVal = document.getElementById('lockZoomVal');
+  const zoomVal = document.getElementById("lockZoomVal");
   if (zoomVal) zoomVal.textContent = `${lockBgZoom.toFixed(1)}×`;
-  const maxPan = (lockBgZoom - 1) / 2 * 100;
+  const maxPan = ((lockBgZoom - 1) / 2) * 100;
   lockBgPanX = Math.max(-maxPan, Math.min(maxPan, lockBgPanX));
   lockBgPanY = Math.max(-maxPan, Math.min(maxPan, lockBgPanY));
-  const previewImg = document.getElementById('lockPreviewImg');
-  if (previewImg) previewImg.style.transform = `translate(${lockBgPanX}%, ${lockBgPanY}%) scale(${lockBgZoom})`;
+  const previewImg = document.getElementById("lockPreviewImg");
+  if (previewImg)
+    previewImg.style.transform = `translate(${lockBgPanX}%, ${lockBgPanY}%) scale(${lockBgZoom})`;
 });
 
-document.querySelectorAll('.mini-tab').forEach(tab => {
-  tab.addEventListener('click', () => {
+document.querySelectorAll(".mini-tab").forEach((tab) => {
+  tab.addEventListener("click", () => {
     const targetTab = tab.dataset.tab;
-    document.querySelectorAll('.mini-tab').forEach(t => t.classList.remove('active'));
-    tab.classList.add('active');
-    document.querySelectorAll('.mini-tab-content').forEach(c => c.classList.remove('active'));
-    document.querySelector(`[data-content="${targetTab}"]`)?.classList.add('active');
+    document
+      .querySelectorAll(".mini-tab")
+      .forEach((t) => t.classList.remove("active"));
+    tab.classList.add("active");
+    document
+      .querySelectorAll(".mini-tab-content")
+      .forEach((c) => c.classList.remove("active"));
+    document
+      .querySelector(`[data-content="${targetTab}"]`)
+      ?.classList.add("active");
   });
 });
 
-document.getElementById('urlBtn')?.addEventListener('click', () => {
-  const urlInput = document.getElementById('urlInput');
-  urlInput.style.display = (urlInput.style.display === 'none' || !urlInput.style.display) ? 'flex' : 'none';
+document.getElementById("urlBtn")?.addEventListener("click", () => {
+  const urlInput = document.getElementById("urlInput");
+  urlInput.style.display =
+    urlInput.style.display === "none" || !urlInput.style.display
+      ? "flex"
+      : "none";
 });
 
-document.getElementById('urlApply')?.addEventListener('click', () => {
-  const url = document.getElementById('lockBgImageInput').value;
+document.getElementById("urlApply")?.addEventListener("click", () => {
+  const url = document.getElementById("lockBgImageInput").value;
   if (url) {
     lockBgImageUrl = url;
-    lockBgPanX = 0; lockBgPanY = 0; lockBgZoom = 1;
+    lockBgPanX = 0;
+    lockBgPanY = 0;
+    lockBgZoom = 1;
     _resetZoomUI();
     updateImagePreview(url);
-    document.getElementById('urlInput').style.display = 'none';
+    document.getElementById("urlInput").style.display = "none";
   }
 });
 
-document.getElementById('imageRemove')?.addEventListener('click', () => {
+document.getElementById("imageRemove")?.addEventListener("click", () => {
   lockBgImageUrl = "";
-  lockBgPosX = 50; lockBgPosY = 50; lockBgZoom = 1;
-  document.getElementById('lockBgImageInput').value = "";
+  lockBgPosX = 50;
+  lockBgPosY = 50;
+  lockBgZoom = 1;
+  document.getElementById("lockBgImageInput").value = "";
   _resetZoomUI();
   updateImagePreview("");
 });
@@ -977,7 +1017,9 @@ document.getElementById("lockBgImageFile")?.addEventListener("change", (e) => {
     const reader = new FileReader();
     reader.onload = (event) => {
       lockBgImageUrl = event.target.result;
-      lockBgPanX = 0; lockBgPanY = 0; lockBgZoom = 1;
+      lockBgPanX = 0;
+      lockBgPanY = 0;
+      lockBgZoom = 1;
       _resetZoomUI();
       updateImagePreview(lockBgImageUrl);
     };
@@ -986,10 +1028,10 @@ document.getElementById("lockBgImageFile")?.addEventListener("change", (e) => {
 });
 
 function _resetZoomUI() {
-  const slider = document.getElementById('lockZoomSlider');
-  const val = document.getElementById('lockZoomVal');
+  const slider = document.getElementById("lockZoomSlider");
+  const val = document.getElementById("lockZoomVal");
   if (slider) slider.value = 1;
-  if (val) val.textContent = '1.0×';
+  if (val) val.textContent = "1.0×";
 }
 
 // 앱 시작 시 테마 초기화 (loadSettingsData가 비동기로 curTheme을 덮어쓰지 않도록)
@@ -997,7 +1039,11 @@ function _resetZoomUI() {
   const theme = await window.api?.getTheme();
   if (theme) {
     curTheme = theme;
-    document.querySelectorAll(".mini-theme").forEach((i) => i.classList.remove("active"));
-    document.querySelector(`.mini-theme[data-theme="${theme}"]`)?.classList.add("active");
+    document
+      .querySelectorAll(".mini-theme")
+      .forEach((i) => i.classList.remove("active"));
+    document
+      .querySelector(`.mini-theme[data-theme="${theme}"]`)
+      ?.classList.add("active");
   }
 })();

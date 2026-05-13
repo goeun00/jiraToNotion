@@ -42,23 +42,36 @@ async function getAllNotionPagesMap() {
 
 // -------------------- Props --------------------
 function jiraProps(issue) {
-  const key = issue.key;
   const fields = issue.fields || {};
-  const summary = fields.summary || "";
-  const status = fields.status?.name || "";
-  const updated = fields.updated || "";
-  const created = fields.created || "";
-  const reporter = fields.reporter?.displayName || fields.reporter?.name || "";
-  const worklogSeconds = Number(issue.__worklogSeconds || 0);
+
+  const key = issue.key || issue.issueKey || "";
+  const summary = issue.summary || fields.summary || "";
+  const status = issue.status || fields.status?.name || "";
+  const updated = issue.updated || fields.updated || "";
+  const created = issue.created || fields.created || "";
+  const reporter =
+    issue.reporter ||
+    fields.reporter?.displayName ||
+    fields.reporter?.name ||
+    "";
+
+  const worklogSeconds = Number(
+    issue.__worklogSeconds ||
+      issue.aggregatetimespent ||
+      fields.aggregatetimespent ||
+      0,
+  );
+
   const logged = Math.floor((worklogSeconds / 28800) * 100) / 100;
   const lastLoggedAt = issue.__lastLoggedAt || null;
+
   return {
-    Title: { title: [{ text: { content: summary } }] },
+    Title: { title: [{ text: { content: summary || key || "제목 없음" } }] },
     Key: { rich_text: [{ text: { content: key } }] },
     Status: status ? { status: { name: status } } : { status: null },
     Updated: updated ? { date: { start: updated } } : { date: null },
     Created: created ? { date: { start: created } } : { date: null },
-    URL: { url: `${env().JIRA_BASE_URL}/browse/${key}` },
+    URL: { url: issue.url || `${env().JIRA_BASE_URL}/browse/${key}` },
     Logged: { number: logged },
     Reporter: { rich_text: [{ text: { content: reporter } }] },
     LastLogDate: lastLoggedAt
@@ -198,6 +211,9 @@ function buildCssBlocks(files = [], repo) {
 }
 // -------------------- CRUD --------------------
 async function createPage(issue) {
+  const description =
+    issue.description || issue.fields?.description || "내용 없음";
+
   return notion.pages.create({
     parent: {
       type: "data_source_id",
@@ -213,7 +229,10 @@ async function createPage(issue) {
             {
               type: "text",
               text: {
-                content: issue.fields.description || "내용 없음",
+                content:
+                  typeof description === "string"
+                    ? description
+                    : JSON.stringify(description).slice(0, 1900),
               },
             },
           ],

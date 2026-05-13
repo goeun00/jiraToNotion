@@ -65,9 +65,11 @@ async function syncJiraIssues() {
   console.log(`Fetched ${issues.length} issues`);
 
   const issuesWithWorklog = issues.map((issue) => {
-    issue.__worklogSeconds = Number(issue.fields?.aggregatetimespent || 0);
+    issue.__worklogSeconds = Number(
+      issue.aggregatetimespent || issue.fields?.aggregatetimespent || 0,
+    );
 
-    const worklogs = issue.fields?.worklog?.worklogs || [];
+    const worklogs = issue.worklogs || issue.fields?.worklog?.worklogs || [];
     let latest = null;
 
     for (const w of worklogs) {
@@ -83,7 +85,6 @@ async function syncJiraIssues() {
     issue.__lastLoggedAt = latest ? new Date(latest).toISOString() : null;
     return issue;
   });
-
   const jiraKeys = new Set(issues.map((i) => i.key));
   const existingPages = await getAllNotionPagesMap();
 
@@ -103,7 +104,8 @@ async function syncJiraIssues() {
           return;
         }
         const notionUpdated = page.properties?.Updated?.date?.start;
-        const jiraUpdated = issue.fields?.updated;
+        const jiraUpdated = issue.updated || issue.fields?.updated;
+
         if (toMinuteEpoch(notionUpdated) !== toMinuteEpoch(jiraUpdated)) {
           await updatePage(page.id, issue);
           updated++;
