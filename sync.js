@@ -8,7 +8,6 @@ const {
   getAllNotionPagesMap,
   createPage,
   updatePage,
-  deletePage,
   getAllGitPRMap,
   createPRPage,
   updatePRPage,
@@ -31,18 +30,6 @@ function toDay(date) {
 
 function toLoggedDays(seconds) {
   return Math.round((Number(seconds || 0) / 28800) * 1000) / 1000;
-}
-
-function getNotionDateStart(prop) {
-  return prop?.date?.start ? String(prop.date.start).slice(0, 10) : "";
-}
-
-function getNotionNumber(prop) {
-  return Number(prop?.number || 0);
-}
-
-function isDifferentNumber(a, b) {
-  return Math.abs(Number(a || 0) - Number(b || 0)) > 0.0005;
 }
 
 function normalizeJiraBase(baseUrl = JIRA_BASE_URL) {
@@ -119,12 +106,14 @@ async function fetchAllWorklogsForIssue(issueKey) {
 }
 
 function getLastLogDateFromWorklogs(worklogs = []) {
-  return worklogs
-    .map((log) => log.started || log.updated || log.created)
-    .filter(Boolean)
-    .map(toDay)
-    .sort()
-    .at(-1) || "";
+  return (
+    worklogs
+      .map((log) => log.started || log.updated || log.created)
+      .filter(Boolean)
+      .map(toDay)
+      .sort()
+      .at(-1) || ""
+  );
 }
 
 async function hydrateIssuesForNotion(issues = []) {
@@ -136,11 +125,8 @@ async function hydrateIssuesForNotion(issues = []) {
       limit(async () => {
         const worklogSeconds = Number(issue.aggregatetimespent || 0);
 
-        // 노션은 월 기준이 아니므로 startedAfter/startedBefore를 절대 넣지 않는다.
-        // Jira search의 fields.worklog는 일부만 내려올 수 있어서, worklog API로 전체 페이지를 다시 읽는다.
-        const allWorklogs = worklogSeconds > 0
-          ? await fetchAllWorklogsForIssue(issue.key)
-          : [];
+        const allWorklogs =
+          worklogSeconds > 0 ? await fetchAllWorklogsForIssue(issue.key) : [];
 
         return {
           ...issue,
@@ -157,16 +143,10 @@ function shouldUpdateJiraPage(page, issue) {
   const notionUpdated = props.Updated?.date?.start;
   const jiraUpdated = issue.updated || issue.fields?.updated;
 
-  const nextLogged = toLoggedDays(issue.__worklogSeconds);
-  const notionLogged = getNotionNumber(props.Logged);
-
-  const nextLogDate = issue.logDate || "";
-  const notionLogDate = getNotionDateStart(props["Log Dates"]);
-
   return (
     toMinuteEpoch(notionUpdated) !== toMinuteEpoch(jiraUpdated) ||
-    isDifferentNumber(notionLogged, nextLogged) ||
-    notionLogDate !== nextLogDate
+    props.Estimated?.number == null ||
+    props["업무분류"]?.select?.name == null
   );
 }
 
@@ -223,7 +203,6 @@ async function syncJiraIssues() {
 
   let created = 0;
   let updated = 0;
-  let deleted = 0;
 
   await Promise.all([
     ...issuesForNotion.map((issue) =>
@@ -248,22 +227,11 @@ async function syncJiraIssues() {
         }
       }),
     ),
-
-    // fetchIssues()의 기존 JQL 기준에서 빠진 페이지는 기존 로직대로 archive한다.
-    ...[...existingPages.entries()].map(([key, page]) =>
-      notionLimit(async () => {
-        if (!jiraKeys.has(key)) {
-          await deletePage(page.id);
-          deleted++;
-          console.log(`- deleted ${key}`);
-        }
-      }),
-    ),
   ]);
 
   const end = Date.now();
   const elapsed = ((end - start) / 1000).toFixed(2);
-  console.log(`created=${created}, updated=${updated}, deleted=${deleted}`);
+  console.log(`created=${created}, updated=${updated}`);
   console.log(`Elapsed time: ${elapsed}s`);
 }
 

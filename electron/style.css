@@ -592,10 +592,6 @@ body {
   background: rgba(0, 0, 0, 0.08);
   color: var(--lcd-text);
 }
-.stat-pill.deleted {
-  background: rgba(0, 0, 0, 0.05);
-  color: var(--lcd-dim);
-}
 .result-elapsed {
   margin-top: 2px;
   font-size: 9px;

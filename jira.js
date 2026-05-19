@@ -430,6 +430,9 @@ function mapIssue(jiraBase, issue, reportFieldIds = {}) {
     epicLink,
 
     aggregatetimespent: Number(fields.aggregatetimespent || 0),
+    aggregateTimeOriginalEstimate: Number(
+      fields.aggregatetimeoriginalestimate || fields.timeoriginalestimate || 0,
+    ),
     worklogs: fields.worklog?.worklogs || [],
 
     url: `${jiraBase}/browse/${issue.key}`,
@@ -448,7 +451,7 @@ async function fetchIssues() {
   const reportFields = getReportFields(reportFieldIds);
 
   const fields = [
-    "summary,status,updated,created,reporter,assignee,aggregatetimespent,worklog,description,issuetype,components",
+    "summary,status,updated,created,reporter,assignee,aggregatetimespent,aggregatetimeoriginalestimate,timeoriginalestimate,worklog,description,issuetype,components",
     reportFields,
   ]
     .filter(Boolean)

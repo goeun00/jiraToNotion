@@ -134,7 +134,6 @@ function startSync(type) {
     total: 0,
     created: 0,
     updated: 0,
-    deleted: 0,
     elapsed: null,
   };
 
@@ -240,7 +239,6 @@ function showMsgResult() {
     stats.innerHTML = `
       <span class="stat-pill created">+${_ctx.created}</span>
       <span class="stat-pill updated">~${_ctx.updated}</span>
-      <span class="stat-pill deleted">-${_ctx.deleted}</span>
     `;
   }
 
@@ -264,7 +262,7 @@ function setProg(val) {
 function bumpProg() {
   if (!_ctx || _ctx.total === 0) return;
 
-  const done = _ctx.created + _ctx.updated + _ctx.deleted;
+  const done = _ctx.created + _ctx.updated;
   const pct = Math.min(95, 50 + Math.floor((done / _ctx.total) * 45));
 
   setProg(pct);
@@ -350,17 +348,10 @@ function parseLog(msg) {
     return;
   }
 
-  if (/^-\s/.test(msg)) {
-    _ctx.deleted++;
-    bumpProg();
-    return;
-  }
-
-  const mS = msg.match(/created=(\d+),?\s*updated=(\d+),?\s*deleted=(\d+)/i);
+  const mS = msg.match(/created=(\d+),?\s*updated=(\d+)/i);
   if (mS) {
     _ctx.created = parseInt(mS[1], 10);
     _ctx.updated = parseInt(mS[2], 10);
-    _ctx.deleted = parseInt(mS[3], 10);
     setProg(95);
   }
 

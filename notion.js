@@ -49,6 +49,22 @@ function normalizeStatusCategory(statusCategory = "") {
 
   return statusMap[statusCategory] || "To Do";
 }
+
+function toDays(seconds) {
+  return Math.round((Number(seconds || 0) / 28800) * 1000) / 1000;
+}
+
+function getWorkCategory(components = []) {
+  const names = components.map((c) => c.name || "").join(" ");
+  const hasG = /GMARKET|G마켓|G\b/i.test(names);
+  const hasI = /AUCTION|옥션|IAC|I\b/i.test(names);
+
+  if (hasG && hasI) return "G/I";
+  if (hasG) return "G";
+  if (hasI) return "I";
+  return "";
+}
+
 // -------------------- Props --------------------
 function jiraProps(issue) {
   const fields = issue.fields || {};
@@ -73,7 +89,19 @@ function jiraProps(issue) {
       0,
   );
 
-  const logged = Math.round((worklogSeconds / 28800) * 1000) / 1000;
+  const logged = toDays(worklogSeconds);
+
+  const estimated = toDays(
+    issue.aggregateTimeOriginalEstimate ??
+      fields.aggregatetimeoriginalestimate ??
+      fields.timeoriginalestimate ??
+      0,
+  );
+
+  const workCategory = getWorkCategory(
+    issue.components || fields.components || [],
+  );
+
   const lastLoggedAt = issue.__lastLoggedAt || null;
 
   return {
@@ -105,6 +133,10 @@ function jiraProps(issue) {
         ? { start: issue.expectedDeliveryDate }
         : null,
     },
+    Estimated: { number: estimated },
+    업무분류: workCategory
+      ? { select: { name: workCategory } }
+      : { select: null },
   };
 }
 
@@ -275,12 +307,6 @@ async function updatePage(pageId, issue) {
     properties: jiraProps(issue),
   });
 }
-async function deletePage(pageId) {
-  return notion.pages.update({
-    page_id: pageId,
-    archived: true,
-  });
-}
 
 async function getAllGitPRMap() {
   const pageMap = new Map();
@@ -382,7 +408,6 @@ module.exports = {
   getAllNotionPagesMap,
   createPage,
   updatePage,
-  deletePage,
   getAllGitPRMap,
   createPRPage,
   updatePRPage,
