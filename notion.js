@@ -40,13 +40,24 @@ async function getAllNotionPagesMap() {
   return pageMap;
 }
 
+function normalizeStatusCategory(statusCategory = "") {
+  const statusMap = {
+    new: "To Do",
+    indeterminate: "In Progress",
+    done: "Done",
+  };
+
+  return statusMap[statusCategory] || "To Do";
+}
 // -------------------- Props --------------------
 function jiraProps(issue) {
   const fields = issue.fields || {};
 
   const key = issue.key || issue.issueKey || "";
   const summary = issue.summary || fields.summary || "";
-  const status = issue.status || fields.status?.name || "";
+  const status = normalizeStatusCategory(
+    issue.statusCategory || fields.status?.statusCategory?.key || "",
+  );
   const updated = issue.updated || fields.updated || "";
   const created = issue.created || fields.created || "";
   const reporter =
@@ -56,13 +67,13 @@ function jiraProps(issue) {
     "";
 
   const worklogSeconds = Number(
-    issue.__worklogSeconds ||
-      issue.aggregatetimespent ||
-      fields.aggregatetimespent ||
+    issue.__worklogSeconds ??
+      issue.aggregatetimespent ??
+      fields.aggregatetimespent ??
       0,
   );
 
-  const logged = Math.floor((worklogSeconds / 28800) * 100) / 100;
+  const logged = Math.round((worklogSeconds / 28800) * 1000) / 1000;
   const lastLoggedAt = issue.__lastLoggedAt || null;
 
   return {
@@ -74,9 +85,26 @@ function jiraProps(issue) {
     URL: { url: issue.url || `${env().JIRA_BASE_URL}/browse/${key}` },
     Logged: { number: logged },
     Reporter: { rich_text: [{ text: { content: reporter } }] },
-    LastLogDate: lastLoggedAt
-      ? { date: { start: lastLoggedAt } }
-      : { date: null },
+    "Log Dates": {
+      date: issue.logDate ? { start: issue.logDate } : null,
+    },
+    "Epic Key": {
+      rich_text: [{ text: { content: issue.epicLink || "" } }],
+    },
+    "Epic Name": {
+      rich_text: [{ text: { content: issue.epicName || "" } }],
+    },
+    "Target start": {
+      date: issue.targetStart ? { start: issue.targetStart } : null,
+    },
+    "Target end": {
+      date: issue.targetEnd ? { start: issue.targetEnd } : null,
+    },
+    "Expected Delivery Date": {
+      date: issue.expectedDeliveryDate
+        ? { start: issue.expectedDeliveryDate }
+        : null,
+    },
   };
 }
 
@@ -214,6 +242,9 @@ async function createPage(issue) {
   const description =
     issue.description || issue.fields?.description || "내용 없음";
 
+  const descriptionText =
+    typeof description === "string" ? description : JSON.stringify(description);
+
   return notion.pages.create({
     parent: {
       type: "data_source_id",
@@ -229,10 +260,7 @@ async function createPage(issue) {
             {
               type: "text",
               text: {
-                content:
-                  typeof description === "string"
-                    ? description
-                    : JSON.stringify(description).slice(0, 1900),
+                content: descriptionText.slice(0, 1900),
               },
             },
           ],

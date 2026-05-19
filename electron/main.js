@@ -49,21 +49,6 @@ function createWindow() {
     },
   });
   win.loadFile("index.html");
-
-  // 테마 로드
-  win.webContents.on("did-finish-load", () => {
-    const themeConfigPath = path.join(__dirname, "theme-config.json");
-    let theme = "s";
-    if (fs.existsSync(themeConfigPath)) {
-      try {
-        const data = JSON.parse(fs.readFileSync(themeConfigPath, "utf-8"));
-        theme = data.theme || "s";
-      } catch {}
-    }
-    win.webContents.executeJavaScript(
-      `document.documentElement.setAttribute('data-theme', '${theme}')`,
-    );
-  });
 }
 
 app.whenReady().then(() => {
@@ -131,12 +116,11 @@ ipcMain.handle("save-env", async (_, data) => {
 JIRA_BASE_URL=${data.JIRA_BASE_URL}
 JIRA_PAT=${data.JIRA_PAT}
 JIRA_EMAIL=${data.JIRA_EMAIL || ""}
-WORKLOG_TARGET_DAYS=${data.WORKLOG_TARGET_DAYS || "7"}
+WORKLOG_TARGET_DAYS=${data.WORKLOG_TARGET_DAYS || "20"}
 
 NOTION_TOKEN=${data.NOTION_TOKEN}
 NOTION_SOURCE_ID_JIRA=${data.NOTION_SOURCE_ID_JIRA}
 NOTION_SOURCE_ID_PR=${data.NOTION_SOURCE_ID_PR}
-NOTION_SOURCE_ID_REVIEW=${data.NOTION_SOURCE_ID_REVIEW}
 
 GITHUB_TOKEN=${data.GITHUB_TOKEN}
 GITHUB_USERNAME=${data.GITHUB_USERNAME}
@@ -241,11 +225,6 @@ ipcMain.handle("get-theme", () => {
 
 ipcMain.handle("set-theme", (_, theme) => {
   fs.writeFileSync(themeConfigPath, JSON.stringify({ theme }, null, 2));
-  if (win) {
-    win.webContents.executeJavaScript(
-      `document.documentElement.setAttribute('data-theme', '${theme}')`,
-    );
-  }
-  console.log(`✔ Theme changed to: ${theme}`);
+  console.log(`✔ Theme saved: ${theme}`);
   return true;
 });

@@ -16,6 +16,13 @@ let lockBgPanX = 0;
 let lockBgPanY = 0;
 let lockBgZoom = 1;
 
+// 설정창에서만 쓰는 임시 잠금 배경 상태
+// SAVE 전에는 실제 잠금화면(lockBg*)에 반영하지 않는다.
+let draftLockBgImageUrl = "";
+let draftLockBgPanX = 0;
+let draftLockBgPanY = 0;
+let draftLockBgZoom = 1;
+
 const state = {
   logworkOffset: 0,
   logwork: {},
@@ -158,10 +165,21 @@ function startSync(type) {
 
       stopWarmup();
       stopSubCycle();
-      hideMsgView();
+      setProg(100);
 
-      busy = false;
-      _ctx = null;
+      if (_ctx) {
+        _ctx.error = err?.message || "동기화 중 오류가 발생했어요";
+      }
+
+      setTimeout(() => {
+        showMsgResult();
+
+        setTimeout(() => {
+          hideMsgView();
+          busy = false;
+          _ctx = null;
+        }, 2600);
+      }, 300);
     });
 }
 
@@ -219,26 +237,16 @@ function showMsgResult() {
 
   const stats = document.getElementById("result-stats");
   if (stats) {
-    stats.innerHTML = "";
-
-    if (_ctx.created > 0) {
-      stats.innerHTML += `<span class="stat-pill created">+${_ctx.created}</span>`;
-    }
-
-    if (_ctx.updated > 0) {
-      stats.innerHTML += `<span class="stat-pill updated">~${_ctx.updated}</span>`;
-    }
-
-    if (_ctx.deleted > 0) {
-      stats.innerHTML += `<span class="stat-pill deleted">-${_ctx.deleted}</span>`;
-    }
+    stats.innerHTML = `
+      <span class="stat-pill created">+${_ctx.created}</span>
+      <span class="stat-pill updated">~${_ctx.updated}</span>
+      <span class="stat-pill deleted">-${_ctx.deleted}</span>
+    `;
   }
 
-  if (_ctx.elapsed) {
-    const elapsed = document.getElementById("result-elapsed");
-    if (elapsed) {
-      elapsed.textContent = `${_ctx.elapsed}s`;
-    }
+  const elapsed = document.getElementById("result-elapsed");
+  if (elapsed) {
+    elapsed.textContent = _ctx.elapsed ? `${_ctx.elapsed}s` : "";
   }
 }
 
@@ -642,6 +650,18 @@ function closeSettingsPopover() {
   settingsOverlay.classList.remove("show");
 }
 
+function applyTheme(theme = "s") {
+  curTheme = theme || "s";
+  document.documentElement.dataset.theme = curTheme;
+  localStorage.setItem("theme", curTheme);
+}
+
+function syncThemeButtons() {
+  document.querySelectorAll(".mini-theme").forEach((item) => {
+    item.classList.toggle("active", item.dataset.theme === curTheme);
+  });
+}
+
 // 설정 로드
 async function loadSettingsData() {
   const env = await window.api?.loadEnv();
@@ -667,24 +687,33 @@ async function loadSettingsData() {
   lockBgPanY = Number(env.LOCK_BG_POS_Y ?? 0);
   lockBgZoom = Number(env.LOCK_BG_ZOOM ?? 1) || 1;
 
+  // 설정창 프리뷰는 draft 상태로만 변경한다.
+  draftLockBgImageUrl = lockBgImageUrl;
+  draftLockBgPanX = lockBgPanX;
+  draftLockBgPanY = lockBgPanY;
+  draftLockBgZoom = lockBgZoom;
+
   const zoomSlider = document.getElementById("lockZoomSlider");
   const zoomVal = document.getElementById("lockZoomVal");
-  if (zoomSlider) zoomSlider.value = lockBgZoom;
-  if (zoomVal) zoomVal.textContent = `${lockBgZoom.toFixed(1)}×`;
+  if (zoomSlider) zoomSlider.value = draftLockBgZoom;
+  if (zoomVal) zoomVal.textContent = `${draftLockBgZoom.toFixed(1)}×`;
 
-  updateImagePreview(lockBgImageUrl);
-
-  // 현재 테마 — 이미 curTheme으로 UI가 반영되어 있으므로 active class만 동기화
-  document
-    .querySelectorAll(".mini-theme")
-    .forEach((i) => i.classList.remove("active"));
-  document
-    .querySelector(`.mini-theme[data-theme="${curTheme}"]`)
-    ?.classList.add("active");
+  updateImagePreview(draftLockBgImageUrl);
+  syncThemeButtons();
 }
 
 // 설정 저장
 async function saveSettingsData() {
+  const nextTarget = Number(document.getElementById("targetLog").value || 7);
+  const nextTheme = curTheme;
+  const nextLockBgImageUrl = draftLockBgImageUrl;
+  const nextLockBgPanX = draftLockBgPanX;
+  const nextLockBgPanY = draftLockBgPanY;
+  const nextLockBgZoom = draftLockBgZoom;
+
+  // 저장/리로드 직후 첫 페인트용 캐시
+  localStorage.setItem("theme", nextTheme || "s");
+
   const data = {
     JIRA_BASE_URL: document.getElementById("jiraUrl").value,
     JIRA_PAT: document.getElementById("jiraPat").value,
@@ -695,14 +724,11 @@ async function saveSettingsData() {
     GITHUB_TOKEN: document.getElementById("githubToken").value,
     GITHUB_USERNAME: document.getElementById("githubUsername").value,
     GITHUB_URL: document.getElementById("githubUrl").value,
-    WORKLOG_TARGET_DAYS: document.getElementById("targetLog").value || "7",
-    LOCK_BG_POS_X: lockBgPanX,
-    LOCK_BG_POS_Y: lockBgPanY,
-    LOCK_BG_ZOOM: lockBgZoom,
+    WORKLOG_TARGET_DAYS: String(nextTarget || 7),
+    LOCK_BG_POS_X: nextLockBgPanX,
+    LOCK_BG_POS_Y: nextLockBgPanY,
+    LOCK_BG_ZOOM: nextLockBgZoom,
   };
-
-  const nextTarget = Number(data.WORKLOG_TARGET_DAYS || 7);
-  const nextTheme = curTheme;
 
   closeSettingsPopover();
 
@@ -711,8 +737,14 @@ async function saveSettingsData() {
       await Promise.all([
         window.api?.saveEnv(data),
         nextTheme ? window.api?.setTheme?.(nextTheme) : Promise.resolve(),
-        window.api?.saveLockBg?.({ url: lockBgImageUrl }),
+        window.api?.saveLockBg?.({ url: nextLockBgImageUrl }),
       ]);
+
+      // SAVE 성공 후에만 실제 잠금화면 상태에 반영한다.
+      lockBgImageUrl = nextLockBgImageUrl;
+      lockBgPanX = nextLockBgPanX;
+      lockBgPanY = nextLockBgPanY;
+      lockBgZoom = nextLockBgZoom;
 
       const cur = state.logwork[logworkKey(state.logworkOffset)];
 
@@ -750,12 +782,9 @@ document.querySelectorAll(".mini-theme").forEach((item) => {
   item.addEventListener("click", () => {
     const selectedTheme = item.dataset.theme;
     if (!selectedTheme || selectedTheme === curTheme) return;
-    curTheme = selectedTheme;
-    document
-      .querySelectorAll(".mini-theme")
-      .forEach((i) => i.classList.remove("active"));
-    item.classList.add("active");
-    document.documentElement.dataset.theme = selectedTheme;
+
+    applyTheme(selectedTheme);
+    syncThemeButtons();
   });
 });
 document.getElementById("refreshWorklog")?.addEventListener("click", () => {
@@ -783,6 +812,15 @@ document.addEventListener("keydown", (e) => {
    초기화
 ───────────────────────────────────── */
 window.addEventListener("DOMContentLoaded", async () => {
+  const cachedTheme = localStorage.getItem("theme");
+  applyTheme(cachedTheme || "s");
+
+  const savedTheme = await window.api?.getTheme?.();
+  if (savedTheme && savedTheme !== curTheme) {
+    applyTheme(savedTheme);
+  }
+  syncThemeButtons();
+
   document.getElementById("menu-view").classList.add("show");
 
   renderCurrentMenu();
@@ -875,7 +913,7 @@ function updateImagePreview(url) {
     placeholder.style.display = "none";
     previewImg.src = url;
     previewImg.style.display = "block";
-    previewImg.style.transform = `translate(${lockBgPanX}%, ${lockBgPanY}%) scale(${lockBgZoom})`;
+    previewImg.style.transform = `translate(${draftLockBgPanX}%, ${draftLockBgPanY}%) scale(${draftLockBgZoom})`;
     removeBtn.style.display = "flex";
     zoomRow.style.display = "flex";
     lockPreview?.classList.add("has-image");
@@ -923,12 +961,12 @@ let _dragStartPosX = 50,
   _dragStartPosY = 50;
 
 document.getElementById("lockPreview")?.addEventListener("mousedown", (e) => {
-  if (!lockBgImageUrl) return;
+  if (!draftLockBgImageUrl) return;
   _dragActive = true;
   _dragStartX = e.clientX;
   _dragStartY = e.clientY;
-  _dragStartPosX = lockBgPanX;
-  _dragStartPosY = lockBgPanY;
+  _dragStartPosX = draftLockBgPanX;
+  _dragStartPosY = draftLockBgPanY;
   e.preventDefault();
 });
 
@@ -944,7 +982,7 @@ document.addEventListener("mousemove", (e) => {
   lockBgPanY = Math.max(-maxPan, Math.min(maxPan, _dragStartPosY + dy));
   const previewImg = document.getElementById("lockPreviewImg");
   if (previewImg)
-    previewImg.style.transform = `translate(${lockBgPanX}%, ${lockBgPanY}%) scale(${lockBgZoom})`;
+    previewImg.style.transform = `translate(${draftLockBgPanX}%, ${draftLockBgPanY}%) scale(${draftLockBgZoom})`;
 });
 
 document.addEventListener("mouseup", () => {
@@ -961,7 +999,7 @@ document.getElementById("lockZoomSlider")?.addEventListener("input", (e) => {
   lockBgPanY = Math.max(-maxPan, Math.min(maxPan, lockBgPanY));
   const previewImg = document.getElementById("lockPreviewImg");
   if (previewImg)
-    previewImg.style.transform = `translate(${lockBgPanX}%, ${lockBgPanY}%) scale(${lockBgZoom})`;
+    previewImg.style.transform = `translate(${draftLockBgPanX}%, ${draftLockBgPanY}%) scale(${draftLockBgZoom})`;
 });
 
 document.querySelectorAll(".mini-tab").forEach((tab) => {
@@ -991,21 +1029,21 @@ document.getElementById("urlBtn")?.addEventListener("click", () => {
 document.getElementById("urlApply")?.addEventListener("click", () => {
   const url = document.getElementById("lockBgImageInput").value;
   if (url) {
-    lockBgImageUrl = url;
-    lockBgPanX = 0;
-    lockBgPanY = 0;
-    lockBgZoom = 1;
+    draftLockBgImageUrl = url;
+    draftLockBgPanX = 0;
+    draftLockBgPanY = 0;
+    draftLockBgZoom = 1;
     _resetZoomUI();
-    updateImagePreview(url);
+    updateImagePreview(draftLockBgImageUrl);
     document.getElementById("urlInput").style.display = "none";
   }
 });
 
 document.getElementById("imageRemove")?.addEventListener("click", () => {
-  lockBgImageUrl = "";
-  lockBgPosX = 50;
-  lockBgPosY = 50;
-  lockBgZoom = 1;
+  draftLockBgImageUrl = "";
+  draftLockBgPanX = 0;
+  draftLockBgPanY = 0;
+  draftLockBgZoom = 1;
   document.getElementById("lockBgImageInput").value = "";
   _resetZoomUI();
   updateImagePreview("");
@@ -1016,34 +1054,21 @@ document.getElementById("lockBgImageFile")?.addEventListener("change", (e) => {
   if (file) {
     const reader = new FileReader();
     reader.onload = (event) => {
-      lockBgImageUrl = event.target.result;
-      lockBgPanX = 0;
-      lockBgPanY = 0;
-      lockBgZoom = 1;
+      draftLockBgImageUrl = event.target.result;
+      draftLockBgPanX = 0;
+      draftLockBgPanY = 0;
+      draftLockBgZoom = 1;
       _resetZoomUI();
-      updateImagePreview(lockBgImageUrl);
+      updateImagePreview(draftLockBgImageUrl);
     };
     reader.readAsDataURL(file);
   }
 });
 
 function _resetZoomUI() {
+  draftLockBgZoom = 1;
   const slider = document.getElementById("lockZoomSlider");
   const val = document.getElementById("lockZoomVal");
   if (slider) slider.value = 1;
   if (val) val.textContent = "1.0×";
 }
-
-// 앱 시작 시 테마 초기화 (loadSettingsData가 비동기로 curTheme을 덮어쓰지 않도록)
-(async () => {
-  const theme = await window.api?.getTheme();
-  if (theme) {
-    curTheme = theme;
-    document
-      .querySelectorAll(".mini-theme")
-      .forEach((i) => i.classList.remove("active"));
-    document
-      .querySelector(`.mini-theme[data-theme="${theme}"]`)
-      ?.classList.add("active");
-  }
-})();

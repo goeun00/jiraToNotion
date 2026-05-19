@@ -3,6 +3,12 @@
   <head>
     <meta charset="UTF-8" />
     <title>NotionFlow</title>
+    <script>
+      (() => {
+        const theme = localStorage.getItem("theme") || "s";
+        document.documentElement.dataset.theme = theme;
+      })();
+    </script>
     <link rel="stylesheet" href="style.css" />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
   </head>
@@ -222,11 +228,11 @@
             <div class="mini-section">
               <div class="mini-label">Theme</div>
               <div class="mini-themes">
-                <div class="mini-theme theme-gn" data-theme="gn"></div>
-                <div class="mini-theme theme-pk" data-theme="pk"></div>
-                <div class="mini-theme theme-s" data-theme="s"></div>
-                <div class="mini-theme theme-bl" data-theme="bl"></div>
+                <div class="mini-theme theme-s active" data-theme="s"></div>
                 <div class="mini-theme theme-bk" data-theme="bk"></div>
+                <div class="mini-theme theme-pk" data-theme="pk"></div>
+                <div class="mini-theme theme-bl" data-theme="bl"></div>
+                <div class="mini-theme theme-gn" data-theme="gn"></div>
               </div>
             </div>
           </div>

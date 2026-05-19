@@ -13,6 +13,7 @@ const REPORT_FIELD_NAMES = {
   targetStart: "Target start",
   targetEnd: "Target end",
   expectedDeliveryDate: "Expected Delivery Date",
+  epicLink: "Epic Link",
 };
 
 let cachedReportFieldIds = null;
@@ -20,7 +21,6 @@ let cachedReportFieldIds = null;
 /* --------------------
    Base Helpers
 -------------------- */
-
 function normalizeJiraBase(baseUrl = JIRA_BASE_URL) {
   return String(baseUrl || "")
     .trim()
@@ -218,7 +218,6 @@ function isSameUserWorklog(log, me) {
   const author = log.author || {};
   const meId = me.accountId || me.name || me.key || "";
 
-  // me 식별값을 못 가져온 경우에는 일단 JQL을 믿는다.
   if (!meId) return true;
 
   return [author.accountId, author.name, author.key]
@@ -272,18 +271,6 @@ function findFieldIdByNames(fields = [], names = []) {
   return matched?.id || "";
 }
 
-function findFieldIdByIncludes(fields = [], keywords = []) {
-  const normalizedKeywords = keywords.map(normalizeFieldName);
-
-  const matched = fields.find((field) => {
-    const fieldName = normalizeFieldName(field.name);
-
-    return normalizedKeywords.some((keyword) => fieldName.includes(keyword));
-  });
-
-  return matched?.id || "";
-}
-
 function normalizeDateValue(value) {
   if (!value) return "";
 
@@ -321,12 +308,14 @@ async function getReportFieldIds(jiraBase, headers) {
     targetStart: process.env.JIRA_FIELD_TARGET_START || "",
     targetEnd: process.env.JIRA_FIELD_TARGET_END || "",
     expectedDeliveryDate: process.env.JIRA_FIELD_EXPECTED_DELIVERY || "",
+    epicLink: process.env.JIRA_FIELD_EPIC_LINK || "",
   };
 
   const ids = {
     targetStart: "",
     targetEnd: "",
     expectedDeliveryDate: "",
+    epicLink: "",
   };
 
   const v = apiVersion(jiraBase);
@@ -340,11 +329,21 @@ async function getReportFieldIds(jiraBase, headers) {
     }
 
     const fields = await res.json();
+    const epicCandidates = (fields || [])
+      .filter((field) =>
+        /epic|상위|상위 항목|상위 이슈/i.test(field.name || ""),
+      )
+      .map((field) => `${field.id} : ${field.name}`);
+
+    console.log(
+      "[Jira epic field candidates]\n" +
+        (epicCandidates.length ? epicCandidates.join("\n") : "(none)"),
+    );
     const fieldIdSet = new Set((fields || []).map((field) => field.id));
 
     const candidates = (fields || [])
       .filter((field) =>
-        /target|start|delivery|expected|end/i.test(field.name || ""),
+        /target|start|delivery|expected|end|epic/i.test(field.name || ""),
       )
       .map((field) => `${field.id} : ${field.name}`);
 
@@ -381,6 +380,7 @@ function getReportFields(reportFieldIds = {}) {
     reportFieldIds.targetStart,
     reportFieldIds.targetEnd,
     reportFieldIds.expectedDeliveryDate,
+    reportFieldIds.epicLink,
   ]
     .filter(Boolean)
     .join(",");
@@ -403,6 +403,10 @@ function mapReportDates(fields = {}, reportFieldIds = {}) {
 function mapIssue(jiraBase, issue, reportFieldIds = {}) {
   const fields = issue.fields || {};
 
+  const epicLink = reportFieldIds.epicLink
+    ? fields[reportFieldIds.epicLink] || ""
+    : "";
+
   return {
     key: issue.key,
     issueKey: issue.key,
@@ -423,8 +427,8 @@ function mapIssue(jiraBase, issue, reportFieldIds = {}) {
       fields.assignee?.displayName || fields.assignee?.name || "",
     ),
     components: fields.components || [],
+    epicLink,
 
-    // ✅ Notion Logged 계산용
     aggregatetimespent: Number(fields.aggregatetimespent || 0),
     worklogs: fields.worklog?.worklogs || [],
 
@@ -436,7 +440,6 @@ function mapIssue(jiraBase, issue, reportFieldIds = {}) {
 /* --------------------
    Issues
 -------------------- */
-
 async function fetchIssues() {
   const jiraBase = normalizeJiraBase(JIRA_BASE_URL);
   const headers = getJiraHeaders(jiraBase, JIRA_PAT, JIRA_EMAIL);
@@ -453,7 +456,20 @@ async function fetchIssues() {
 
   const issues = await fetchAllIssues(jiraBase, headers, SYNC_JQL, fields, 100);
 
-  return issues.map((issue) => mapIssue(jiraBase, issue, reportFieldIds));
+  const mappedIssues = issues.map((issue) =>
+    mapIssue(jiraBase, issue, reportFieldIds),
+  );
+
+  const epicKeys = [
+    ...new Set(mappedIssues.map((issue) => issue.epicLink).filter(Boolean)),
+  ];
+
+  const epicSummaryMap = await fetchEpicSummaryMap(jiraBase, headers, epicKeys);
+
+  return mappedIssues.map((issue) => ({
+    ...issue,
+    epicName: epicSummaryMap.get(issue.epicLink) || "",
+  }));
 }
 
 async function fetchMyIssues(baseUrl, pat, doneDays = 60, email = "") {
@@ -539,6 +555,16 @@ async function fetchIssuesByKeys(baseUrl, pat, keys, email = "") {
   };
 }
 
+async function fetchEpicSummaryMap(jiraBase, headers, epicKeys = []) {
+  if (!epicKeys.length) return new Map();
+
+  const quotedKeys = epicKeys.map((key) => `"${key}"`).join(",");
+  const jql = `key in (${quotedKeys})`;
+
+  const epics = await fetchAllIssues(jiraBase, headers, jql, "summary", 100);
+
+  return new Map(epics.map((epic) => [epic.key, epic.fields?.summary || ""]));
+}
 /* --------------------
    Worklogs
 -------------------- */
