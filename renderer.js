@@ -186,13 +186,7 @@ function startSync(type) {
    메시지 UI
 ───────────────────────────────────── */
 function showMsgLoading(options = {}) {
-  const {
-    type,
-    title,
-    sub = "준비 중...",
-    progress = true,
-    percent = 0,
-  } = options;
+  const { type, title, sub = "준비 중...", progress = true, percent = 0 } = options;
 
   const msgView = document.getElementById("msg-view");
   const msgLoading = document.getElementById("msg-loading");
@@ -206,8 +200,7 @@ function showMsgLoading(options = {}) {
   msgResult?.classList.remove("show");
 
   if (msgMain) {
-    msgMain.textContent =
-      title || (type === "jira" ? "Sync Jira" : type === "pr" ? "Sync PR" : "");
+    msgMain.textContent = title || (type === "jira" ? "Sync Jira" : type === "pr" ? "Sync PR" : "");
   }
 
   if (msgSub) {
@@ -292,18 +285,8 @@ function stopWarmup() {
 function startSubCycle(type) {
   const steps =
     type === "jira"
-      ? [
-          "이슈 불러오는 중",
-          "Notion 페이지 조회 중",
-          "변경사항 비교 중",
-          "Notion 업데이트 중",
-        ]
-      : [
-          "pull request 조회 중",
-          "PR 파일 분석 중",
-          "Notion 페이지 조회 중",
-          "Notion 업데이트 중",
-        ];
+      ? ["이슈 불러오는 중", "Notion 페이지 조회 중", "변경사항 비교 중", "Notion 업데이트 중"]
+      : ["pull request 조회 중", "PR 파일 분석 중", "Notion 페이지 조회 중", "Notion 업데이트 중"];
 
   let i = 0;
 
@@ -401,17 +384,13 @@ function renderLogwork() {
   const data = getLogworkData(state.logworkOffset);
   const target = Number(data.target || 7);
   const logged = Number(data.loggedDays || 0);
-  const rate =
-    target > 0 ? Math.min(100, Math.round((logged / target) * 100)) : 0;
+  const rate = target > 0 ? Math.min(100, Math.round((logged / target) * 100)) : 0;
 
-  document.getElementById("workMonth").textContent =
-    data.label || (data.month ? data.month.replace("-", ".") : "-");
+  document.getElementById("workMonth").textContent = data.label || (data.month ? data.month.replace("-", ".") : "-");
 
-  document.getElementById("loggedDays").textContent =
-    `${formatDecimal(logged)}D`;
+  document.getElementById("loggedDays").textContent = `${formatDecimal(logged)}D`;
 
-  document.getElementById("targetDays").textContent =
-    `/ ${formatDecimal(target)}D`;
+  document.getElementById("targetDays").textContent = `/ ${formatDecimal(target)}D`;
 
   document.getElementById("workProgress").style.width = `${rate}%`;
 }
@@ -455,9 +434,7 @@ function buildWorkReportRows() {
       return bLast - aLast;
     })
     .map(({ issueKey, logs, seconds }) => {
-      const sorted = logs
-        .slice()
-        .sort((a, b) => new Date(a.started) - new Date(b.started));
+      const sorted = logs.slice().sort((a, b) => new Date(a.started) - new Date(b.started));
 
       const firstLog = sorted[0] || {};
 
@@ -465,15 +442,10 @@ function buildWorkReportRows() {
         "JIRA 번호": issueKey,
         업무내용: firstLog.summary || "",
         업무분류: getWorkCategory(firstLog.components),
-        Type:
-          firstLog.issueType || (/^(GPP|BCI)-/i.test(issueKey) ? "BC" : "DR"),
+        Type: firstLog.issueType || (/^(GPP|BCI)-/i.test(issueKey) ? "BC" : "DR"),
         요청구분: "JIRA",
-        요청자: (firstLog.reporter || "")
-          .replace(/\s*\([^)]*\)\s*$/, "")
-          .trim(),
-        담당자: (firstLog.assignee || "")
-          .replace(/\s*\([^)]*\)\s*$/, "")
-          .trim(),
+        요청자: (firstLog.reporter || "").replace(/\s*\([^)]*\)\s*$/, "").trim(),
+        담당자: (firstLog.assignee || "").replace(/\s*\([^)]*\)\s*$/, "").trim(),
         "업무 시작일": firstLog.targetStart || "",
         "업무 종료일": firstLog.targetEnd || "",
         "Mark up Delivery": firstLog.expectedDeliveryDate || "",
@@ -585,21 +557,15 @@ const contextMenu = document.getElementById("contextMenu");
 // 휠 버튼 클릭 이벤트
 document.getElementById("btn-up").addEventListener("click", () => nav("up"));
 
-document
-  .getElementById("btn-down")
-  .addEventListener("click", () => nav("down"));
+document.getElementById("btn-down").addEventListener("click", () => nav("down"));
 
 document.getElementById("btn-settings").addEventListener("click", () => {
   openSettings();
 });
 
-document
-  .getElementById("btn-auto")
-  .addEventListener("click", () => nav("auto"));
+document.getElementById("btn-auto").addEventListener("click", () => nav("auto"));
 
-document
-  .getElementById("btn-center")
-  .addEventListener("click", () => doSelect());
+document.getElementById("btn-center").addEventListener("click", () => doSelect());
 
 // 우클릭 메뉴
 ipod.addEventListener("contextmenu", (e) => {
@@ -662,14 +628,12 @@ async function loadSettingsData() {
   document.getElementById("jiraPat").value = env.JIRA_PAT || "";
   document.getElementById("jiraEmail").value = env.JIRA_EMAIL || "";
   document.getElementById("notionToken").value = env.NOTION_TOKEN || "";
-  document.getElementById("notionSourceJira").value =
-    env.NOTION_SOURCE_ID_JIRA || "";
-  document.getElementById("notionSourcePR").value =
-    env.NOTION_SOURCE_ID_PR || "";
+  document.getElementById("notionSourceJira").value = env.NOTION_SOURCE_ID_JIRA || "";
+  document.getElementById("notionSourcePR").value = env.NOTION_SOURCE_ID_PR || "";
   document.getElementById("githubToken").value = env.GITHUB_TOKEN || "";
   document.getElementById("githubUsername").value = env.GITHUB_USERNAME || "";
   document.getElementById("githubUrl").value = env.GITHUB_URL || "";
-  document.getElementById("targetLog").value = env.WORKLOG_TARGET_DAYS || "7";
+  document.getElementById("targetLog").value = env.WORKLOG_TARGET_DAYS || "20";
 
   // 잠금 설정 로드
   const lockBgData = await window.api?.loadLockBg?.();
@@ -715,7 +679,7 @@ async function saveSettingsData() {
     GITHUB_TOKEN: document.getElementById("githubToken").value,
     GITHUB_USERNAME: document.getElementById("githubUsername").value,
     GITHUB_URL: document.getElementById("githubUrl").value,
-    WORKLOG_TARGET_DAYS: String(nextTarget || 7),
+    WORKLOG_TARGET_DAYS: String(nextTarget || 20),
     LOCK_BG_POS_X: nextLockBgPanX,
     LOCK_BG_POS_Y: nextLockBgPanY,
     LOCK_BG_ZOOM: nextLockBgZoom,
@@ -835,20 +799,7 @@ function updateLockClock() {
   }
 
   const days = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
-  const months = [
-    "JAN",
-    "FEB",
-    "MAR",
-    "APR",
-    "MAY",
-    "JUN",
-    "JUL",
-    "AUG",
-    "SEP",
-    "OCT",
-    "NOV",
-    "DEC",
-  ];
+  const months = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
   const dayName = days[now.getDay()];
   const monthName = months[now.getMonth()];
   const date = now.getDate();
@@ -996,25 +947,16 @@ document.getElementById("lockZoomSlider")?.addEventListener("input", (e) => {
 document.querySelectorAll(".mini-tab").forEach((tab) => {
   tab.addEventListener("click", () => {
     const targetTab = tab.dataset.tab;
-    document
-      .querySelectorAll(".mini-tab")
-      .forEach((t) => t.classList.remove("active"));
+    document.querySelectorAll(".mini-tab").forEach((t) => t.classList.remove("active"));
     tab.classList.add("active");
-    document
-      .querySelectorAll(".mini-tab-content")
-      .forEach((c) => c.classList.remove("active"));
-    document
-      .querySelector(`[data-content="${targetTab}"]`)
-      ?.classList.add("active");
+    document.querySelectorAll(".mini-tab-content").forEach((c) => c.classList.remove("active"));
+    document.querySelector(`[data-content="${targetTab}"]`)?.classList.add("active");
   });
 });
 
 document.getElementById("urlBtn")?.addEventListener("click", () => {
   const urlInput = document.getElementById("urlInput");
-  urlInput.style.display =
-    urlInput.style.display === "none" || !urlInput.style.display
-      ? "flex"
-      : "none";
+  urlInput.style.display = urlInput.style.display === "none" || !urlInput.style.display ? "flex" : "none";
 });
 
 document.getElementById("urlApply")?.addEventListener("click", () => {

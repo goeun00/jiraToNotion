@@ -15,8 +15,12 @@ const fs = require("fs");
 const XLSX = require("xlsx");
 const dotenv = require("dotenv");
 
+// 패키징 후에도 쓰기 가능한 사용자 데이터 폴더 사용
+const userDataPath = app.getPath("userData");
+const envPath = path.join(userDataPath, ".env");
+
 // sync/notion보다 먼저 .env 로드
-dotenv.config({ path: path.join(__dirname, ".env") });
+dotenv.config({ path: envPath });
 
 const {
   syncJiraIssues,
@@ -99,7 +103,6 @@ console.error = (...args) => {
 // ENV 로드
 // -----------------------------
 ipcMain.handle("load-env", async () => {
-  const envPath = path.join(__dirname, ".env");
   if (!fs.existsSync(envPath)) return null;
   const env = dotenv.parse(fs.readFileSync(envPath));
   return env;
@@ -109,8 +112,6 @@ ipcMain.handle("load-env", async () => {
 // ENV 저장
 // -----------------------------
 ipcMain.handle("save-env", async (_, data) => {
-  const envPath = path.join(__dirname, ".env");
-
   const content = `
 JIRA_BASE_URL=${data.JIRA_BASE_URL}
 JIRA_PAT=${data.JIRA_PAT}
@@ -130,7 +131,7 @@ LOCK_BG_POS_Y=${data.LOCK_BG_POS_Y ?? 0}
 LOCK_BG_ZOOM=${data.LOCK_BG_ZOOM ?? 1}
 `.trim();
 
-  fs.writeFileSync(envPath, content);
+  fs.writeFileSync(envPath, content, "utf-8");
   Object.assign(process.env, data);
   console.log("✔ Config saved");
   return true;
@@ -191,7 +192,7 @@ ipcMain.handle("export-work-report", async (_, rows = [], month = "") => {
 // -----------------------------
 // 잠금 배경 이미지 저장
 // -----------------------------
-const lockBgStorePath = path.join(__dirname, "lock-bg-store.json");
+const lockBgStorePath = path.join(userDataPath, "lock-bg-store.json");
 
 ipcMain.handle("load-lock-bg", async () => {
   if (!fs.existsSync(lockBgStorePath)) return { url: "" };
@@ -210,7 +211,7 @@ ipcMain.handle("save-lock-bg", async (_, data) => {
 // -----------------------------
 // 테마 설정
 // -----------------------------
-const themeConfigPath = path.join(__dirname, "theme-config.json");
+const themeConfigPath = path.join(userDataPath, "theme-config.json");
 
 ipcMain.handle("get-theme", () => {
   if (!fs.existsSync(themeConfigPath)) return "s";

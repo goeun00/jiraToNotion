@@ -1,16 +1,18 @@
-require("dotenv").config();
-const twoMonthsAgo = new Date();
-twoMonthsAgo.setMonth(twoMonthsAgo.getMonth() - 6);
-const since = twoMonthsAgo.toISOString().split("T")[0];
-const { GITHUB_TOKEN, GITHUB_USERNAME, GITHUB_URL } = process.env;
+const sixMonthsAgo = new Date();
+sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+const since = sixMonthsAgo.toISOString().split("T")[0];
 
 async function fetchPRs() {
-  const query = `is:pr org:org-publisher author:${GITHUB_USERNAME} created:>=${since}`;
+  const githubToken = process.env.GITHUB_TOKEN;
+  const githubUsername = process.env.GITHUB_USERNAME;
+  const githubUrl = process.env.GITHUB_URL;
+
+  const query = `is:pr org:org-publisher author:${githubUsername} created:>=${since}`;
   const res = await fetch(
-    `${GITHUB_URL}/api/v3/search/issues?q=${encodeURIComponent(query)}&sort=created&order=desc&per_page=100`,
+    `${githubUrl}/api/v3/search/issues?q=${encodeURIComponent(query)}&sort=created&order=desc&per_page=100`,
     {
       headers: {
-        Authorization: `token ${GITHUB_TOKEN}`,
+        Authorization: `token ${githubToken}`,
         Accept: "application/vnd.github+json",
       },
     },
@@ -25,10 +27,10 @@ async function fetchPRs() {
     const repoName = item.repository_url.split("/").pop();
     const prNumber = item.number;
     const prRes = await fetch(
-      `${GITHUB_URL}/api/v3/repos/org-publisher/${repoName}/pulls/${prNumber}`,
+      `${githubUrl}/api/v3/repos/org-publisher/${repoName}/pulls/${prNumber}`,
       {
         headers: {
-          Authorization: `token ${GITHUB_TOKEN}`,
+          Authorization: `token ${githubToken}`,
           Accept: "application/vnd.github+json",
         },
       },
@@ -40,15 +42,18 @@ async function fetchPRs() {
 }
 
 async function fetchPRFiles(owner, repo, prNumber) {
+  const githubToken = process.env.GITHUB_TOKEN;
+  const githubUrl = process.env.GITHUB_URL;
+
   let page = 1;
   const allFiles = [];
 
   while (true) {
     const res = await fetch(
-      `${GITHUB_URL}/api/v3/repos/${owner}/${repo}/pulls/${prNumber}/files?per_page=100&page=${page}`,
+      `${githubUrl}/api/v3/repos/${owner}/${repo}/pulls/${prNumber}/files?per_page=100&page=${page}`,
       {
         headers: {
-          Authorization: `token ${GITHUB_TOKEN}`,
+          Authorization: `token ${githubToken}`,
           Accept: "application/vnd.github+json",
         },
       },
@@ -73,12 +78,15 @@ async function fetchPRFiles(owner, repo, prNumber) {
  * @returns {Promise<{ diffText: string, prUrl: string | null }>}
  */
 async function fetchBranchDiff(owner, repo, base, compare) {
+  const githubToken = process.env.GITHUB_TOKEN;
+  const githubUrl = process.env.GITHUB_URL;
+
   // raw diff 가져오기
   const diffRes = await fetch(
-    `${GITHUB_URL}/api/v3/repos/${owner}/${repo}/compare/${base}...${compare}`,
+    `${githubUrl}/api/v3/repos/${owner}/${repo}/compare/${base}...${compare}`,
     {
       headers: {
-        Authorization: `token ${GITHUB_TOKEN}`,
+        Authorization: `token ${githubToken}`,
         Accept: "application/vnd.github.v3.diff",
       },
     },
@@ -93,10 +101,10 @@ async function fetchBranchDiff(owner, repo, base, compare) {
   let prUrl = null;
   try {
     const prRes = await fetch(
-      `${GITHUB_URL}/api/v3/repos/${owner}/${repo}/pulls?head=${owner}:${compare}&base=${base}&state=all&per_page=1`,
+      `${githubUrl}/api/v3/repos/${owner}/${repo}/pulls?head=${owner}:${compare}&base=${base}&state=all&per_page=1`,
       {
         headers: {
-          Authorization: `token ${GITHUB_TOKEN}`,
+          Authorization: `token ${githubToken}`,
           Accept: "application/vnd.github+json",
         },
       },
@@ -118,14 +126,17 @@ async function fetchBranchDiff(owner, repo, base, compare) {
  * @returns {Promise<string[]>} 저장소명 배열
  */
 async function fetchOrgRepos(org) {
+  const githubToken = process.env.GITHUB_TOKEN;
+  const githubUrl = process.env.GITHUB_URL;
+
   const repos = [];
   let page = 1;
   while (true) {
     const res = await fetch(
-      `${GITHUB_URL}/api/v3/orgs/${org}/repos?per_page=100&page=${page}&sort=updated`,
+      `${githubUrl}/api/v3/orgs/${org}/repos?per_page=100&page=${page}&sort=updated`,
       {
         headers: {
-          Authorization: `token ${GITHUB_TOKEN}`,
+          Authorization: `token ${githubToken}`,
           Accept: "application/vnd.github+json",
         },
       },

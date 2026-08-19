@@ -1,8 +1,3 @@
-const path = require("path");
-require("dotenv").config({
-  path: path.resolve(__dirname, ".env"),
-});
-
 const { fetchIssues } = require("./jira");
 const {
   getAllNotionPagesMap,
@@ -13,8 +8,6 @@ const {
   updatePRPage,
 } = require("./notion");
 const { fetchPRs, fetchPRFiles } = require("./github");
-
-const { JIRA_BASE_URL, JIRA_PAT, JIRA_EMAIL } = process.env;
 
 // -------------------- Helper --------------------
 
@@ -32,7 +25,7 @@ function toLoggedDays(seconds) {
   return Math.round((Number(seconds || 0) / 28800) * 1000) / 1000;
 }
 
-function normalizeJiraBase(baseUrl = JIRA_BASE_URL) {
+function normalizeJiraBase(baseUrl = process.env.JIRA_BASE_URL) {
   return String(baseUrl || "")
     .trim()
     .replace(/\/+$/, "")
@@ -49,9 +42,9 @@ function apiVersion(jiraBase) {
 }
 
 function getJiraHeaders(
-  baseUrl = JIRA_BASE_URL,
-  pat = JIRA_PAT,
-  email = JIRA_EMAIL,
+  baseUrl = process.env.JIRA_BASE_URL,
+  pat = process.env.JIRA_PAT,
+  email = process.env.JIRA_EMAIL,
 ) {
   const jiraBase = normalizeJiraBase(baseUrl);
   const token = String(pat || "").trim();
@@ -73,8 +66,12 @@ function getJiraHeaders(
 }
 
 async function fetchAllWorklogsForIssue(issueKey) {
-  const jiraBase = normalizeJiraBase(JIRA_BASE_URL);
-  const headers = getJiraHeaders(jiraBase, JIRA_PAT, JIRA_EMAIL);
+  const jiraBase = normalizeJiraBase(process.env.JIRA_BASE_URL);
+  const headers = getJiraHeaders(
+    jiraBase,
+    process.env.JIRA_PAT,
+    process.env.JIRA_EMAIL,
+  );
   const v = apiVersion(jiraBase);
   const all = [];
   let startAt = 0;

@@ -1,5 +1,4 @@
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
-require("dotenv").config();
 const { Client } = require("@notionhq/client");
 
 // Client를 매번 생성해서 항상 최신 토큰 사용

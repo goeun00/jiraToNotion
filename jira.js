@@ -1,7 +1,3 @@
-require("dotenv").config();
-
-const { JIRA_BASE_URL, JIRA_PAT, JIRA_EMAIL } = process.env;
-
 const SYNC_JQL =
   "(assignee = currentUser() OR watcher = currentUser()) AND " +
   "(statusCategory != Done OR (statusCategory = Done AND created >= -60d)) " +
@@ -21,7 +17,7 @@ let cachedReportFieldIds = null;
 /* --------------------
    Base Helpers
 -------------------- */
-function normalizeJiraBase(baseUrl = JIRA_BASE_URL) {
+function normalizeJiraBase(baseUrl = process.env.JIRA_BASE_URL) {
   return String(baseUrl || "")
     .trim()
     .replace(/\/+$/, "")
@@ -38,9 +34,9 @@ function apiVersion(jiraBase) {
 }
 
 function getJiraHeaders(
-  baseUrl = JIRA_BASE_URL,
-  pat = JIRA_PAT,
-  email = JIRA_EMAIL,
+  baseUrl = process.env.JIRA_BASE_URL,
+  pat = process.env.JIRA_PAT,
+  email = process.env.JIRA_EMAIL,
 ) {
   const jiraBase = normalizeJiraBase(baseUrl);
   const token = String(pat || "").trim();
@@ -85,13 +81,13 @@ function getSearchUrl(jiraBase, jql, fields, maxResults = 100, startAt = 0) {
 }
 
 async function jiraFetch(path, options = {}) {
-  const jiraBase = normalizeJiraBase(options.baseUrl || JIRA_BASE_URL);
+  const jiraBase = normalizeJiraBase(options.baseUrl || process.env.JIRA_BASE_URL);
   const headers =
     options.headers ||
     getJiraHeaders(
       jiraBase,
-      options.pat || JIRA_PAT,
-      options.email || JIRA_EMAIL,
+      options.pat || process.env.JIRA_PAT,
+      options.email || process.env.JIRA_EMAIL,
     );
 
   const res = await fetch(`${jiraBase}${path}`, {
@@ -444,8 +440,12 @@ function mapIssue(jiraBase, issue, reportFieldIds = {}) {
    Issues
 -------------------- */
 async function fetchIssues() {
-  const jiraBase = normalizeJiraBase(JIRA_BASE_URL);
-  const headers = getJiraHeaders(jiraBase, JIRA_PAT, JIRA_EMAIL);
+  const jiraBase = normalizeJiraBase(process.env.JIRA_BASE_URL);
+  const headers = getJiraHeaders(
+    jiraBase,
+    process.env.JIRA_PAT,
+    process.env.JIRA_EMAIL,
+  );
 
   const reportFieldIds = await getReportFieldIds(jiraBase, headers);
   const reportFields = getReportFields(reportFieldIds);
@@ -620,10 +620,10 @@ async function fetchWorklogIssues(jiraBase, headers, jql, searchFields) {
 }
 
 async function fetchMyWorklogs(
-  baseUrl = JIRA_BASE_URL,
-  pat = JIRA_PAT,
+  baseUrl = process.env.JIRA_BASE_URL,
+  pat = process.env.JIRA_PAT,
   monthOffset = 0,
-  email = JIRA_EMAIL,
+  email = process.env.JIRA_EMAIL,
 ) {
   const jiraBase = normalizeJiraBase(baseUrl);
   const headers = getJiraHeaders(jiraBase, pat, email);
